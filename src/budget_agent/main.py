@@ -77,6 +77,17 @@ def main(argv: list[str] | None = None) -> int:
                     DecisionProposal,
                 )
                 print(f"结构化输出检查通过（{len(client.traces)} 次请求）")
+                usage_fields = (
+                    ("输入 tokens", "prompt_tokens"),
+                    ("输出 tokens", "completion_tokens"),
+                    ("总 tokens", "total_tokens"),
+                )
+                for number, trace in enumerate(client.traces, 1):
+                    # 只展示服务返回的数据；缺失字段不能记为零，也不推算费用。
+                    details = "，".join(
+                        f"{label}={trace.usage.get(key, '未提供')}" for label, key in usage_fields
+                    )
+                    print(f"第 {number} 次请求用量：{details}")
                 print(result.model_dump_json(indent=2))
             else:
                 print(client.check_connection())
