@@ -41,7 +41,12 @@ A 已确认基础文本连通和 `uv run budget-agent check-model --json` 自检
 - [x] 第四步：运行球鞋演示案例，核对工具轨迹与最终结果（2026-11-07，本机记录已核对）。
 - [x] 第五步：正式模式接线检查通过，当前在 B 预算占位函数处返回 partial（2026-11-07，本机记录已核对）。
 - [x] 第六步：保存提交 c88032a、上传分支并创建 PR #1（2026-11-07）。
-- [ ] 第七步：提交并推送 Windows 中文输出修复，等待跨平台检查与人工审阅。
+- [x] 第七步：Windows 修复提交 d816e84 的三系统检查通过；PR #1 按 A 要求直接合并，合并提交 841c881。
+- [x] 第八步：模型请求超时检查通过，错误有记录且仅请求一次（A 于 2026-11-07 确认）。
+- [x] 第九步：任务到期停止后续步骤并保留部分结果的检查通过（A 于 2026-11-07 确认）。
+- [x] 第十步：真实 JSON 自检用量已确认，1 次请求，输入 265、输出 62、合计 327 tokens。
+- [x] 第十一步：确认学校每日赠送 100 元额度，并记录当日平台定价快照。
+- [ ] 第十二步：提交并上传本轮运行保护、用量显示与验证记录。
 
 第三步执行：
 
@@ -50,8 +55,8 @@ uv run pytest tests/test_contracts.py tests/test_model_client.py tests/test_regi
 ```
 
 这组检查使用演示或模拟服务，不调用真实学校模型。最初 24 个案例已由 A 确认通过，
-补充 3 个 CLI 编码回归后当前共 27 个，覆盖非法输入、JSON 重试、工具白名单/上限、
-失败状态、记录回放与 Windows 中文输出等。
+后续继续补充必要回归，覆盖非法输入、JSON 重试、工具白名单/上限、
+失败状态、记录回放与 Windows 中文输出等；案例数量以实际 pytest 输出为准。
 通过后继续对照流程图阅读 run_case()，再集成 B/C/D 的正式模块。
 
 第四步执行：
@@ -112,7 +117,60 @@ git status --short --branch
 触发 UnicodeEncodeError：标准输出使用 cp1252，无法编码中文。
 已在 main() 入口统一配置 stdout/stderr 为 UTF-8，并新增独立子进程回归检查，
 模拟 cp1252 下的案例列表、正常运行与错误提示。其他模块逻辑保持现有接口。
-本机验证后提交到同一分支并推送，PR 会自动更新，Windows 结果需看新一轮远程检查。
+修复推送后，Windows、Linux、macOS 的新一轮远程检查全部通过。
+PR #1 已按 A 的明确要求直接合并，未进行人工审阅；本机 main 已同步。
+
+第八步开始下一轮运行保护验收，分支为 `feat/A-runtime-checks`。
+在 [tests/test_model_client.py](../../tests/test_model_client.py) 中新增
+`test_timeout_is_reported_once_and_retains_trace`：模拟 HTTP 读取超时，
+检查统一错误、仅一次请求和完整调用记录。单独运行：
+
+```text
+uv run pytest tests/test_model_client.py::test_timeout_is_reported_once_and_retains_trace -v
+```
+
+此测试让模拟服务直接抛出超时异常，验证适配层的错误处理，不验证真实网络会等待多少秒。
+正常 JSON 格式失败允许重试一次；HTTP 超时不触发这项格式重试。
+
+第九步在 [tests/test_workflow.py](../../tests/test_workflow.py) 中新增
+`test_workflow_deadline_preserves_partial_record`，单独运行：
+
+```text
+uv run pytest tests/test_workflow.py::test_workflow_deadline_preserves_partial_record -v
+```
+
+测试设置 10 秒任务上限，在欲望节点完成后将模拟时钟从第 0 秒推进到第 11 秒。
+期望总控在下一节点开始前返回 partial，保留已有预算、观点、证据与调用轨迹，
+不继续执行理性/优惠/裁判节点，不产生最终建议；返回记录仍能保存与回放。
+这个测试不联网、不实际等待。它验证步骤边界的截止时间检查；
+当前同步流程不会强行打断正在执行的 Python 函数，联网操作仍需各自的请求超时。
+
+第十步复用模型 JSON 自检，现在会显示每次请求的输入、输出和总 token 用量：
+
+```text
+uv run budget-agent check-model --json
+```
+
+用量由学校模型响应提供，缺失项目显示“未提供”，不当成零、不自行换算费用。
+如果 JSON 格式触发重试，各次请求分别显示。此处仅展示本次调用用量，
+账户剩余额度及其单位需到学校平台查询；两者分别记录。
+A 已在 qwen3.8-chat 上确认：1 次请求，输入 265、输出 62、总计 327 tokens。
+详细记录见 [model_setup.md](model_setup.md)。
+
+第十一步已由 A 确认：学校每天赠送 100 元额度。平台模型用量表显示的是请求、tokens 与费用，
+没有剩余额度字段；当天实际余额以平台显示为准，不从单次自检推算。
+qwen3.8-chat 的当前价格快照及统计行已记入 [model_setup.md](model_setup.md)。
+
+第十二步把本轮已验证成果保存并上传：
+
+```text
+git add src/budget_agent/main.py tests/test_model_client.py tests/test_workflow.py README.md docs/A docs/common
+git commit -m "feat(A): verify runtime limits and report token usage"
+git push -u origin feat/A-runtime-checks
+```
+
+本轮包含模型请求超时与整次任务到期的回归检查、JSON 自检逐次 token 用量显示、
+以及实测与配额记录。正式业务仍等待 B/C/D 完成后集成。
 
 ## 第一项任务
 

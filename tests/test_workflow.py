@@ -71,6 +71,37 @@ def test_tool_limit_preserves_partial_trace(cases, config):
     assert record.evidence
 
 
+def test_workflow_deadline_preserves_partial_record(cases, config, monkeypatch):
+    # 第一步：给总控和工具管理使用同一个模拟时钟，不进行真实等待。
+    clock = {"now": 100.0}
+    monkeypatch.setattr("budget_agent.workflow.monotonic", lambda: clock["now"])
+    monkeypatch.setattr("budget_agent.tools.registry.monotonic", lambda: clock["now"])
+    config = config.model_copy(update={"workflow_timeout_seconds": 10})
+    services = build_services(config)
+    original_desire = services.desire
+
+    # 第二步：欲望节点返回观点时，将时钟推进到整次任务截止时间之后。
+    def finish_after_deadline(context, model):
+        argument = original_desire(context, model)
+        clock["now"] = 111.0
+        return argument
+
+    services.desire = finish_after_deadline
+    record = run_case(cases["sneakers_wait"], config, services)
+
+    # 第三步：下一步开始前必须终止，保留已有观点、证据和工具轨迹。
+    assert record.status == "partial"
+    assert record.errors == ["工作流已达到时间上限"]
+    assert [trace.name for trace in record.tool_calls] == ["calculate_budget", "get_products"]
+    assert [argument.role for argument in record.arguments] == ["desire"]
+    assert [trace.role for trace in record.model_calls] == ["desire"]
+    assert any(evidence.id == "budget:initial" for evidence in record.evidence)
+    assert record.proposed_decision is None
+    assert record.final_decision is None
+    assert record.finished_at is not None
+    assert load_record(save_record(record, config.output_dir)) == record
+
+
 def test_cli_real_exit_is_nonzero_and_demo_zero(monkeypatch):
     def not_ready(*args, **kwargs):
         raise ModuleNotReady("测试：正式预算暂不可用")
