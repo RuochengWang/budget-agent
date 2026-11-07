@@ -98,7 +98,7 @@ RunRecord                将输入、过程、依据和结果装在一起的运�
 | [src/budget_agent/__main__.py](../../../src/budget_agent/__main__.py) | 让 `python -m budget_agent` 能找到命令入口 | A，已有 |
 | [src/budget_agent/schemas.py](../../../src/budget_agent/schemas.py) | 全组通用的数据表格模板和格式检查 | A 协调，全组遵守，已有 |
 | [src/budget_agent/workflow.py](../../../src/budget_agent/workflow.py) | 安排每一步的顺序、选择演示/正式模块、收集运行结果 | A，已有基础 |
-| [src/budget_agent/model_client.py](../../../src/budget_agent/model_client.py) | 向学校服务发送请求、接收与检查模型返回；另含假模型 | A，已编写，真实连接待验证 |
+| [src/budget_agent/model_client.py](../../../src/budget_agent/model_client.py) | 向学校服务发送请求、接收与检查模型返回；另含假模型 | A，基础文本与真实 JSON 自检已确认通过；正式角色待联调 |
 | [src/budget_agent/config.py](../../../src/budget_agent/config.py) | 读取配置和本机环境变量，处理跨平台路径 | A，已有 |
 | [src/budget_agent/storage.py](../../../src/budget_agent/storage.py) | 保存、读取整次运行的 JSON 记录 | A，已有 |
 | [src/budget_agent/errors.py](../../../src/budget_agent/errors.py) | 统一错误类型，例如“模块未完成”“调用次数用完” | A，已有 |
