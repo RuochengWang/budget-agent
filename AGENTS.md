@@ -1,8 +1,9 @@
 # 此仓库的协作约定
 
-只作用于 budget-agent 项目。先阅读 README、docs/contracts.md 和相关 docs/roles/X.md。
+只作用于 budget-agent 项目。依次阅读 README、docs/common/overview/README.md、
+docs/common/overview/flowcharts.md、docs/common/contracts.md 和对应 docs/A/—docs/E/ 中的 README.md。
 
-- 用户（组长）为 A；其余成员暂以 B—E 标识。展示时间 2026-11-21 下午，Asia/Shanghai。
+- 用户负责 A，成员统一以 A—E 标识，不附加职务称谓。展示时间 2026-11-21 下午，Asia/Shanghai。
 - 交付为协作骨架，不要自动替所有成员完成业务 TODO。
 - 公共契约 schemas.py、工作流与依赖由 A 协调；改接口同步文档和所有调用方。
 - 正式模块不得依赖 demo.py；正式模式不得自动回退到演示。
@@ -12,4 +13,5 @@
 - 不提交真实密钥、.env、个人记录或 outputs 运行文件。
 - 运行 pytest 与 ruff check；业务模块实现后移除相应严格 xfail 标记。
 - 改动限制在相关负责人文件；跨模块变更先记录影响与迁移方案。
-- 不自动发布、推送、合并或向他人发送消息。由组长执行外部 Git 操作。
+- docs 只设 A、B、C、D、E、common 六个一级目录；公共结构和流程图统一在 common/overview。
+- 不自动发布、推送、合并或向他人发送消息。由用户执行外部 Git 操作。

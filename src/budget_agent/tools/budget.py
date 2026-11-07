@@ -1,4 +1,4 @@
-"""B 负责。详见 docs/roles/B.md 与 docs/contracts.md。"""
+"""B 负责。详见 docs/B/README.md 与 docs/common/contracts.md。"""
 
 from budget_agent.errors import ModuleNotReady
 from budget_agent.schemas import BudgetResult, UserProfile

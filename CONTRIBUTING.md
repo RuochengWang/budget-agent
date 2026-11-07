@@ -1,32 +1,41 @@
 # Git 协作指南
 
-组长为 A。只把 budget-agent 作为单独仓库，不要上传整个课程目录。
-当前交付没有创建远程仓库、没有推送，也没有提交真实密钥。
+成员统一以 A—E 标识。远程仓库由 A 维护并向组员提供地址。密钥与本地运行记录不提交。
 
-## 组长首次上传
+## 每位成员先按此顺序上手
 
-在 budget-agent 目录执行，先在代码托管平台创建空仓库：
+1. **先获取最新仓库。** 首次使用先克隆；已经克隆的先保存手头工作，再更新 main。
+2. **再看整体框架。** 全员先读 [总体结构](docs/common/overview/README.md) 和
+   [系统流程图](docs/common/overview/flowcharts.md)，用 [文件地图](docs/common/overview/file_map.md) 定位上下游。
+3. **再看自己的开发文档。** 共同遵守 [接口约定](docs/common/contracts.md)，然后按角色进入：
+   [A](docs/A/README.md)、[B](docs/B/README.md)、[C](docs/C/README.md)、[D](docs/D/README.md)、[E](docs/E/README.md)。
+4. **最后进入开发。** 安装环境、跑通示例、从最新 main 创建任务分支，按个人指南开发与验收，再提 PR。
+
+A 首次完成建仓和分享后，也按同一阅读路径确认公共接口与自己的任务。
+
+## 首次拉取与开始开发
+
+首次使用：
 
 ```text
-git init -b main
-git add .
-git status --short
-git diff --cached --stat
-git commit -m "chore: initialize collaborative scaffold"
-git remote add origin 替换为实际仓库地址
-git push -u origin main
+git clone https://github.com/RuochengWang/budget-agent.git
+cd budget-agent
 ```
 
-提交前查看暂存文件，确认没有 .env、outputs 记录和个人材料。
-不要复制 `.env.example` 的占位字符串当真密钥，也不要共享包含密钥的截图。
-建议 main 禁止直接推送，合并需一次组员审阅与 CI 通过；由 A 在平台设置。
-
-## 成员日常流程
+已经克隆仓库的同学，先提交或妥善保存手头改动，再更新本机 main：
 
 ```text
-git clone 替换为实际仓库地址
-cd budget-agent
+git switch main
+git pull --ff-only origin main
+```
+
+**到这里先阅读公共总览、流程图、接口约定与自己的开发指南。**
+确认任务后再安装环境、跑示例和创建分支。以下以 B 开发预算为例，其他成员替换分支名：
+
+```text
 uv sync --frozen --extra dev --extra ui
+uv run budget-agent run --case sneakers_wait
+git switch main
 git switch -c feat/B-budget
 ```
 
@@ -53,7 +62,11 @@ README 的命令以已经进入项目根目录为前提，终端路径有空格�
 
 A 统一维护 pyproject.toml 与 uv.lock；确需新增依赖先讨论，再由 A 更新两个锁文件。
 requirements.lock 是 pip 备用锁，使用 `uv export --frozen --extra dev --extra ui --no-emit-project --output-file requirements.lock` 同步导出。
-schemas.py 改动必须更新 contracts.md、调用方和案例；不要把同名协议复制到私人文件。
+schemas.py 改动必须更新 [公共接口约定](docs/common/contracts.md)、调用方和案例；不要把同名协议复制到私人文件。
+
+文档只分为 `docs/A/`—`docs/E/` 和 `docs/common/` 六个一级目录。
+个人实现与交付资料放对应角色目录；全员规则放 common；项目总览与流程图放 common/overview。
+移动或新增文档时同步 README、个人指南、公共文件地图和引用链接。
 
 ## 完成业务 TODO
 

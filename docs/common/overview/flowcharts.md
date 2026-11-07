@@ -1,4 +1,8 @@
-# 架构与当前实现边界（A）
+# 系统流程图与运行说明（A—E 全员共读）
+
+先读 [总体结构](README.md)，再对照本页理解执行顺序；具体文件可查 [文件地图](file_map.md)。
+
+## 一次运行的完整流程
 
 ```mermaid
 flowchart TD
@@ -64,3 +68,24 @@ RunRecord 保存输入、无密钥配置、协议/包版本、提示词 SHA-256�
 
 关键证据 ID：`input:profile`、`input:request`、`budget:initial`、`budget:final`、
 `product:<id>`、`promotion:<id>`、`offer:chosen`。D 返回的新证据不可覆盖旧 ID。
+
+## 角色、模型与工具如何连接
+
+```mermaid
+flowchart TD
+    W["A：workflow.py 调度"] --> R["B/D：各角色 agents/"]
+    R --> P["各自 prompts/ 中的指令 + 公共上下文"]
+    P --> M["A：model_client.py 连接学校模型"]
+    M --> R
+    R --> T["A：registry.py 校验工具名、参数和调用额度"]
+    T --> C["B/C：预算、商品、活动、优惠计算工具"]
+    C --> T
+    T --> R
+    R --> W
+    W --> D["D：最终程序约束检查"]
+    D --> E["E：界面展示；A：记录保存"]
+```
+
+该图说明职责连接；正式角色策略仍需 B/D 实现。并非每个角色都需要调用工具，
+优惠角色负责基于中间结果选择工具；总控也直接调用预算和商品工具。
+角色提交观点或建议，工具返回结构化计算与数据，最后由总控收集。

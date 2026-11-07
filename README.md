@@ -1,12 +1,32 @@
 # 赛博节俭局 · 消费决策 Agent
 
-五人课程项目的**可运行协作骨架**。组长负责 A；课堂展示为 **2026 年 11 月 21 日下午（北京时间）**。
+五人课程项目的**可运行协作骨架**。课堂展示为 **2026 年 11 月 21 日下午（北京时间）**。
 
 目前完成公共协议、串行流程、工具白名单、记录与回放、学校模型适配层和最小界面。
 预算、通用优惠求解、正式角色策略与评测仍由 A—E 开发。
 离线演示采用脚本角色和手工复算的优惠 fixture，**不代表正式算法或模型效果**。
 
-第一次理解项目，先读 [组长导览：运行流程与逐文件地图](docs/leader_guide.md)。
+## A—E 统一上手顺序
+
+**每位同学都先了解整个项目，再进入自己的模块开发。**
+
+1. **获取最新仓库。** A 首次建仓并分享地址；B—E 首次使用先克隆到本机。A 在自己的现有仓库工作。
+   已有本机仓库的同学，先保存手头改动，再更新 main；具体命令见 [Git 协作指南](CONTRIBUTING.md)。
+2. **看共同框架。** 先读 [总体结构](docs/common/overview/README.md) 和
+   [系统流程图](docs/common/overview/flowcharts.md)，了解各模块与负责人；
+   需要查具体文件时看 [文件地图](docs/common/overview/file_map.md)。
+3. **看接口与个人任务。** 阅读 [公共接口约定](docs/common/contracts.md)，
+   再进入自己的 `docs/A/`、`docs/B/`、`docs/C/`、`docs/D/` 或 `docs/E/`，阅读对应 README。
+4. **进入开发。** 按下方说明安装环境、跑通离线示例，再从最新 main 创建任务分支，完成开发、检查与 PR。
+
+首次克隆（地址由 A 提供，命令将本机目录统一命名为 budget-agent）：
+
+```text
+git clone 替换为实际仓库地址 budget-agent
+cd budget-agent
+```
+
+公共资料统一入口：[docs/common/README.md](docs/common/README.md)。个人开发入口见下方“成员入口”。
 
 ## 第一次启动（Windows / macOS / Linux）
 
@@ -84,7 +104,7 @@ BUDGET_AGENT_BASE_URL=https://api.llm.ustc.edu.cn/v1
 BUDGET_AGENT_MODEL=qwen3.8-chat
 ```
 
-地址与模型名来自组长提供的学校平台截图。适配层发送到 `/chat/completions`。
+地址与模型名来自 A 提供的学校平台截图。适配层发送到 `/chat/completions`。
 以下命令**明确发起一次真实请求**，用于连接检查：
 
 ```text
@@ -93,20 +113,23 @@ uv run budget-agent check-model
 
 连接成功不等于正式业务已完成。第一阶段先统一一个文本 chat 模型；推理、OCR、
 图像模型不是可随意替换的同类接口，其他模型需由 A 实测后配置。
-完整的用户提供列表见 [模型接入说明](docs/model_setup.md)。
+完整的用户提供列表见 [模型接入说明](docs/A/model_setup.md)。
 
 ## 成员入口
 
 | 成员 | 主责 | 开始阅读 |
 |---|---|---|
-| A（组长） | 协议、流程、模型与集成 | [A 开发指南](docs/roles/A.md) |
-| B | 预算与理性分析 | [B 开发指南](docs/roles/B.md) |
-| C | 数据与优惠求解 | [C 开发指南](docs/roles/C.md) |
-| D | 角色协作、优惠工具策略与裁判 | [D 开发指南](docs/roles/D.md) |
-| E | 界面、案例、评测与展示 | [E 开发指南](docs/roles/E.md) |
+| A | 协议、流程、模型与集成 | [A 开发指南](docs/A/README.md) |
+| B | 预算与理性分析 | [B 开发指南](docs/B/README.md) |
+| C | 数据与优惠求解 | [C 开发指南](docs/C/README.md) |
+| D | 角色协作、优惠工具策略与裁判 | [D 开发指南](docs/D/README.md) |
+| E | 界面、案例、评测与展示 | [E 开发指南](docs/E/README.md) |
 
-共同阅读：[架构](docs/architecture.md) · [接口契约](docs/contracts.md) ·
-[Git 协作](CONTRIBUTING.md) · [排期](docs/roadmap.md) · [任务清单](docs/tasks.md)。
+共同阅读：[总体结构](docs/common/overview/README.md) · [系统流程图](docs/common/overview/flowcharts.md) · [接口契约](docs/common/contracts.md) ·
+[Git 协作](CONTRIBUTING.md) · [排期](docs/common/roadmap.md) · [任务清单](docs/common/tasks.md)。
+
+**每个人需要修改哪些文件？** 各成员指南前部都有“需要完成的文件”表，列出完整路径、当前状态和具体任务。
+全组索引见 [文件分工与任务清单](docs/common/tasks.md)。
 
 ## 检查与回放
 
@@ -121,7 +144,7 @@ uv run python -m evaluation.run --baseline M --cases data/cases/test.jsonl
 业务验收测试暂用严格 `xfail(raises=ModuleNotReady)` 标记；完成对应模块后应移除标记。
 不要只看测试是否全绿，要区分 `passed` 和尚待实现的 `xfailed`。
 
-本次交付的具体检查结果见 [验证记录](docs/verification.md)。
+本次交付的具体检查结果见 [验证记录](docs/common/verification.md)。
 
 回放不调用模型，CLI 会标明历史运行时间与模式。没有随仓库提供“真实模型运行记录”。
 
@@ -135,7 +158,9 @@ data/catalog/           C：明确标记为演示的商品与活动
 data/cases/             E：开发案例与待冻结测试集
 evaluation/             E：评测接口与评分标准
 tests/                  公共检查与 B/C/D/A 的验收起点
-docs/roles/             每位成员的开发文档
+docs/A/ 至 docs/E/      各成员自己的开发文档
+docs/common/           全员共读的接口、任务、排期与验证记录
+docs/common/overview/  总体结构、流程图与逐文件地图
 outputs/                本地记录，默认忽略
 .github/                CI 与 PR/任务模板
 ```

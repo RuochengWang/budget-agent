@@ -4,7 +4,7 @@ about: 一项可独立验收的成员任务
 ---
 
 负责人：A / B / C / D / E
-对应 docs/tasks.md 编号：
+对应 docs/common/tasks.md 编号：
 目标日期：
 
 任务与修改文件：

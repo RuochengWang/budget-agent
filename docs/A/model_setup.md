@@ -1,6 +1,6 @@
 # 学校模型接入（A）
 
-来源：组长 2026-11-07 提供的学校平台截图。协议为 OpenAI 兼容文本接口。
+来源：A 于 2026-11-07 提供的学校平台截图。协议为 OpenAI 兼容文本接口。
 
 - Base URL：`https://api.llm.ustc.edu.cn/v1`
 - 请求地址：`https://api.llm.ustc.edu.cn/v1/chat/completions`

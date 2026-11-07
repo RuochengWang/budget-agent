@@ -1,7 +1,23 @@
 # C · 数据与优惠求解
 
-主责 `tools/catalog.py`、`promotions.py`、`optimizer.py`、`data/catalog/`、
-`tests/test_optimizer.py`。先读 contracts.md，尤其优惠顺序与整数分摊约定。
+先取得最新仓库，阅读 [总体结构](../common/overview/README.md)、
+[系统流程图](../common/overview/flowcharts.md) 和 [接口约定](../common/contracts.md)，
+再按本文开发，尤其注意公共接口中的优惠顺序与整数分摊约定。
+
+## 需要完成的文件
+
+以下路径相对于项目根目录。先完成数据读取，再开发并验证求解器。
+
+| 文件 | 当前状态 | C 要完成什么 |
+|---|---|---|
+| [src/budget_agent/tools/catalog.py](../../src/budget_agent/tools/catalog.py) | **待实现**，目前为占位函数 | 实现商品搜索和按 ID 精确读取；验证快照，处理未知 ID |
+| [src/budget_agent/tools/promotions.py](../../src/budget_agent/tools/promotions.py) | **待实现**，目前为占位函数 | 加载活动，按商品、商家和时点筛选并验证规则 |
+| [src/budget_agent/tools/optimizer.py](../../src/budget_agent/tools/optimizer.py) | **待实现**，目前为占位函数 | 实现单买基准、有限穷举、合法优惠、总付款比较、未知与排除原因 |
+| [data/catalog/products.json](../../data/catalog/products.json) | 已有少量演示商品，**待整理** | 准备支持范围内的商品快照，保留价格、来源、采集时间和演示标记 |
+| [data/catalog/promotions.json](../../data/catalog/promotions.json) | 已有少量演示活动，**待整理** | 准备完整结构化活动，补足测试所需规则类型与边界 |
+| [tests/test_optimizer.py](../../tests/test_optimizer.py) | 已有验收起点，当前严格 xfail | 与 B 人工复核预期金额，补齐规则边界，实现后移除对应标记 |
+
+当前清单中的数据可继续使用演示快照，来源性质要明确。联网适配属于后续可选扩展。
 
 ## 推荐开发顺序
 

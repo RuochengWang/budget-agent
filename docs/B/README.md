@@ -1,7 +1,20 @@
 # B · 预算与理性分析
 
-先读 README 与 contracts.md。主责文件：`tools/budget.py`、`agents/rational.py`、
-`prompts/rational.md`、`tests/test_budget.py`。不要修改 demo.py 来完成正式任务。
+先取得最新仓库，阅读 [总体结构](../common/overview/README.md)、
+[系统流程图](../common/overview/flowcharts.md) 和 [接口约定](../common/contracts.md)，再按本文开发。
+
+## 需要完成的文件
+
+以下路径相对于项目根目录。先实现预算，再实现理性角色；正式任务在这些文件中完成。
+
+| 文件 | 当前状态 | B 要完成什么 |
+|---|---|---|
+| [src/budget_agent/tools/budget.py](../../src/budget_agent/tools/budget.py) | **待实现**，目前为占位函数 | 写预算公式、缺字段处理、最终付款复核，保留负可支配金额 |
+| [src/budget_agent/agents/rational.py](../../src/budget_agent/agents/rational.py) | **待实现**，目前为占位函数 | 接入模型，分析必要性、替代与机会成本，引用预算和其他证据 |
+| [src/budget_agent/prompts/rational.md](../../src/budget_agent/prompts/rational.md) | 已有起始提示词，**待完善** | 补齐理性策略、未知信息处理和输出要求 |
+| [tests/test_budget.py](../../tests/test_budget.py) | 已有验收起点，当前严格 xfail | 实现预算后移除对应标记，补足必要边界，确保测试真正通过 |
+
+`demo.py` 是独立演示替身，修改它不会完成 B 的正式任务。
 
 ## 第一项任务：预算函数
 
