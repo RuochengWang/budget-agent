@@ -39,3 +39,15 @@ within_budget=false，原始和最终建议均为 wait，错误与程序调整�
 A 继续运行正式模式。读取最近的正式球鞋记录确认 status=partial，
 错误指向 B 的正式预算占位函数，模型调用次数为 0；与当前预期一致。
 下一项保存当前 A 阶段代码、测试与验证记录，再上传分支并创建 PR。
+
+## PR #1 的 Windows 编码问题（2026-11-07）
+
+提交 c88032a 的远程检查中，Linux/macOS 通过，Windows 在命令行打印中文时
+出现 UnicodeEncodeError，日志显示标准输出使用 cp1252。
+本机通过 PYTHONIOENCODING=cp1252、PYTHONUTF8=0 的独立进程复现退出码 1。
+
+修复在 CLI 入口统一 stdout/stderr 的 UTF-8 输出，保留无法重新配置的内存流。
+新增 3 个子进程回归：中文案例列表、球鞋正常运行、未知案例错误提示。
+本机验证：ruff 通过；全量 34 passed、11 xfailed，后者仍为 B/C 待实现业务。
+本次验证模拟了失败编码环境，尚未在 Windows 系统实际运行；需提交并推送后
+等待 PR 的新一轮 Windows 检查。PR 人工审阅也尚待完成。

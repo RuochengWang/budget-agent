@@ -1,6 +1,7 @@
 """A：统一命令行入口。默认无网络；只有 check-model/正式角色才可能联网。"""
 
 import argparse
+import sys
 from pathlib import Path
 
 from pydantic import ValidationError
@@ -21,7 +22,19 @@ def load_cases(path: Path) -> list[CaseInput]:
     ]
 
 
+def _configure_console() -> None:
+    """中文 CLI 统一使用 UTF-8，兼容 Windows 重定向和 CI 的默认单字节编码。
+
+    只在命令入口调用；被替换为 StringIO 等内存对象的流保持原样。
+    """
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if callable(reconfigure):
+            reconfigure(encoding="utf-8", errors="backslashreplace")
+
+
 def main(argv: list[str] | None = None) -> int:
+    _configure_console()
     parser = argparse.ArgumentParser(description="消费决策 Agent 协作骨架")
     parser.add_argument("--config", type=Path, default=None)
     commands = parser.add_subparsers(dest="command", required=True)

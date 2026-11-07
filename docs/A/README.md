@@ -23,7 +23,7 @@
 | [src/budget_agent/agents/base.py](../../src/budget_agent/agents/base.py) | 已有角色调用辅助 | 支持 B/D 接入；根据联调问题完善公共调用与校验 |
 | [src/budget_agent/tools/registry.py](../../src/budget_agent/tools/registry.py) | 已有工具白名单与限制 | 集成 C/D 的工具使用，维护参数校验、调用上限与轨迹 |
 | [src/budget_agent/storage.py](../../src/budget_agent/storage.py)、[src/budget_agent/main.py](../../src/budget_agent/main.py) | 已有保存、回放与命令入口 | 验证正式记录、失败状态、回放和命令行运行 |
-| [tests/test_workflow.py](../../tests/test_workflow.py)、[tests/test_model_client.py](../../tests/test_model_client.py)、[tests/test_registry.py](../../tests/test_registry.py)、[tests/test_contracts.py](../../tests/test_contracts.py) | 已有基础检查 | 新增实际集成中发现的必要回归案例，保持公共检查通过 |
+| [tests/test_workflow.py](../../tests/test_workflow.py)、[tests/test_model_client.py](../../tests/test_model_client.py)、[tests/test_registry.py](../../tests/test_registry.py)、[tests/test_contracts.py](../../tests/test_contracts.py)、[tests/test_cli_encoding.py](../../tests/test_cli_encoding.py) | 已有基础与编码回归检查 | 新增实际集成中发现的必要回归案例，保持公共检查通过 |
 | [pyproject.toml](../../pyproject.toml)、[uv.lock](../../uv.lock)、[requirements.lock](../../requirements.lock)、[.github/workflows/checks.yml](../../.github/workflows/checks.yml) | 已有安装与检查配置 | 统一依赖；有变动时同步锁文件，检查远程 CI 和跨平台运行 |
 | [docs/A/model_setup.md](model_setup.md) | 已有接入说明 | 补充真实连接验证结果与实际支持的接口能力 |
 
@@ -40,16 +40,18 @@ A 已确认基础文本连通和 `uv run budget-agent check-model --json` 自检
 - [x] 第三步：在本机检查数据格式、模型适配、工具管理和总控基础（A 于 2026-11-07 确认成功）。
 - [x] 第四步：运行球鞋演示案例，核对工具轨迹与最终结果（2026-11-07，本机记录已核对）。
 - [x] 第五步：正式模式接线检查通过，当前在 B 预算占位函数处返回 partial（2026-11-07，本机记录已核对）。
-- [ ] 第六步：把本阶段 A 的功能、测试与验证记录保存为 Git 提交，再上传分支并创建 PR。
+- [x] 第六步：保存提交 c88032a、上传分支并创建 PR #1（2026-11-07）。
+- [ ] 第七步：提交并推送 Windows 中文输出修复，等待跨平台检查与人工审阅。
 
 第三步执行：
 
 ```text
-uv run pytest tests/test_contracts.py tests/test_model_client.py tests/test_registry.py tests/test_workflow.py -q
+uv run pytest tests/test_contracts.py tests/test_model_client.py tests/test_registry.py tests/test_workflow.py tests/test_cli_encoding.py -q
 ```
 
-这组检查使用演示或模拟服务，不调用真实学校模型。当前包含 24 个案例，
-覆盖非法输入、JSON 重试、工具白名单/上限、失败状态和记录回放等。
+这组检查使用演示或模拟服务，不调用真实学校模型。最初 24 个案例已由 A 确认通过，
+补充 3 个 CLI 编码回归后当前共 27 个，覆盖非法输入、JSON 重试、工具白名单/上限、
+失败状态、记录回放与 Windows 中文输出等。
 通过后继续对照流程图阅读 run_case()，再集成 B/C/D 的正式模块。
 
 第四步执行：
@@ -105,6 +107,12 @@ git status --short --branch
 
 `git add` 选择本次提交的文件；`git commit` 创建一个可追溯版本；最后一条检查保存后的状态。
 本机提交完成后，再把 feat/A-integration 上传并创建 PR。正式业务集成仍需等待 B/C/D 的模块。
+
+第七步处理 PR 自动检查发现的问题。PR #1 的 Windows 检查在 CLI 打印中文时
+触发 UnicodeEncodeError：标准输出使用 cp1252，无法编码中文。
+已在 main() 入口统一配置 stdout/stderr 为 UTF-8，并新增独立子进程回归检查，
+模拟 cp1252 下的案例列表、正常运行与错误提示。其他模块逻辑保持现有接口。
+本机验证后提交到同一分支并推送，PR 会自动更新，Windows 结果需看新一轮远程检查。
 
 ## 第一项任务
 
