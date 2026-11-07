@@ -1,0 +1,5 @@
+[
+  {"basket_ids":["sneakers"],"subtotal_cents":80000,"discount_cents":15000,"shipping_cents":0,"payable_cents":65000,"baseline_payable_cents":65000,"rule_ids":["shoes-150"],"verified":true,"verification_method":"demo_fixture","is_demo":true,"unknowns":[],"excluded_reasons":[]},
+  {"basket_ids":["daily_goods"],"subtotal_cents":28000,"discount_cents":0,"shipping_cents":0,"payable_cents":28000,"baseline_payable_cents":28000,"rule_ids":[],"verified":true,"verification_method":"demo_fixture","is_demo":true,"unknowns":[],"excluded_reasons":[]},
+  {"basket_ids":["daily_goods","tissue"],"subtotal_cents":30500,"discount_cents":5000,"shipping_cents":0,"payable_cents":25500,"baseline_payable_cents":28000,"rule_ids":["daily-50"],"verified":true,"verification_method":"demo_fixture","is_demo":true,"unknowns":[],"excluded_reasons":[]}
+]

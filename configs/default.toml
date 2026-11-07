@@ -1,0 +1,11 @@
+# A 维护。金额均为整数分；模式只能通过明确的参数切换。
+mode = "demo"
+model = "qwen3.8-chat"
+base_url = "https://api.llm.ustc.edu.cn/v1"
+request_timeout_seconds = 45
+workflow_timeout_seconds = 180
+max_tool_calls = 6
+max_output_retries = 1
+max_addon_candidates = 8
+data_dir = "data"
+output_dir = "outputs"

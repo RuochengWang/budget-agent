@@ -1,0 +1,6 @@
+[
+  {"id":"sneakers","name":"演示球鞋","price_cents":80000,"merchant":"demo-shop","source_url":null,"observed_at":"2026-11-07T16:00:00+08:00","is_demo":true},
+  {"id":"daily_goods","name":"演示日用品组合","price_cents":28000,"merchant":"demo-shop","source_url":null,"observed_at":"2026-11-07T16:00:00+08:00","is_demo":true},
+  {"id":"tissue","name":"演示纸巾","price_cents":2500,"merchant":"demo-shop","source_url":null,"observed_at":"2026-11-07T16:00:00+08:00","is_demo":true},
+  {"id":"large_addon","name":"演示高价凑单品","price_cents":8000,"merchant":"demo-shop","source_url":null,"observed_at":"2026-11-07T16:00:00+08:00","is_demo":true}
+]

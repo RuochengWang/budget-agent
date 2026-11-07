@@ -1,0 +1,4 @@
+[
+  {"id":"shoes-150","kind":"reduction","merchant":"demo-shop","eligible_product_ids":["sneakers"],"threshold_cents":70000,"discount_cents":15000,"stackable":false,"threshold_basis":"original_eligible","valid_from":"2026-11-01T00:00:00+08:00","valid_to":"2026-12-01T00:00:00+08:00","source_url":null,"is_demo":true},
+  {"id":"daily-50","kind":"reduction","merchant":"demo-shop","eligible_product_ids":["daily_goods","tissue","large_addon"],"threshold_cents":30000,"discount_cents":5000,"stackable":false,"threshold_basis":"original_eligible","valid_from":"2026-11-01T00:00:00+08:00","valid_to":"2026-12-01T00:00:00+08:00","source_url":null,"is_demo":true}
+]
