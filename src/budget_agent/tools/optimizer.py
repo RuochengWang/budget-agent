@@ -180,36 +180,43 @@ def _coupon_discount(
     catalog: dict[str, Product],
     reduction: PromotionRule | None,
 ) -> int:
-    if rule.threshold_basis == "original_eligible":
-        eligible = _eligible_amount(rule, basket_ids, catalog)
-        if eligible < rule.threshold_cents:
-            return 0
-        return min(rule.discount_cents, eligible)
+    """计算优惠券减免。
 
-    # after_reduction_eligible：先按比例分摊满减，再检查券门槛
-    prices = {
-        pid: catalog[pid].price_cents
-        for pid in basket_ids
-        if pid in (reduction.eligible_product_ids if reduction else [])
-    }
-    red_discount = (
-        _reduction_discount(reduction, basket_ids, catalog) if reduction else 0
-    )
-    allocated = _allocate_discount(prices, red_discount) if reduction else {}
+    - original_eligible：门槛看参与商品原价
+    - after_reduction_eligible：门槛看满减分摊后的剩余
+    - 无论哪种，实际减免都不能超过券参与商品当前剩余可减金额
+    """
+    allocated: dict[str, int] = {}
+    if reduction is not None:
+        prices = {
+            pid: catalog[pid].price_cents
+            for pid in basket_ids
+            if pid in reduction.eligible_product_ids
+        }
+        red_discount = _reduction_discount(reduction, basket_ids, catalog)
+        allocated = _allocate_discount(prices, red_discount)
 
-    remaining_eligible = 0
-    for pid in basket_ids:
-        if pid not in rule.eligible_product_ids:
-            continue
-        remaining_eligible += catalog[pid].price_cents - allocated.get(pid, 0)
+    def remaining_of(pid: str) -> int:
+        return catalog[pid].price_cents - allocated.get(pid, 0)
 
-    if remaining_eligible < rule.threshold_cents:
+    coupon_ids = [pid for pid in basket_ids if pid in rule.eligible_product_ids]
+    if not coupon_ids:
         return 0
+
+    if rule.threshold_basis == "original_eligible":
+        threshold_base = sum(catalog[pid].price_cents for pid in coupon_ids)
+    else:
+        threshold_base = sum(remaining_of(pid) for pid in coupon_ids)
+
+    if threshold_base < rule.threshold_cents:
+        return 0
+
+    remaining_eligible = sum(remaining_of(pid) for pid in coupon_ids)
     return min(rule.discount_cents, remaining_eligible)
 
 
 def _allocate_discount(prices: dict[str, int], discount: int) -> dict[str, int]:
-    """按价格比例把满减分摊到整数分；剩余分按余数降序、ID 升序分配。"""
+    """按价格比例把满减分摊到整数分；剩余分按余数降序、ID 升序，每次只分 1 分。"""
     if not prices or discount <= 0:
         return {pid: 0 for pid in prices}
 
@@ -229,7 +236,6 @@ def _allocate_discount(prices: dict[str, int], discount: int) -> dict[str, int]:
         room = prices[pid] - result[pid]
         if room <= 0:
             continue
-        take = min(room, remain)
-        result[pid] += take
-        remain -= take
+        result[pid] += 1
+        remain -= 1
     return result
