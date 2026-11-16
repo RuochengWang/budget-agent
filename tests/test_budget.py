@@ -1,13 +1,8 @@
-"""B 的独立验收起点。实现后移除严格 xfail，而不是将其留作成功标记。"""
+"""B 的独立验收：预算计算边界。"""
 
 import pytest
 
-from budget_agent.errors import ModuleNotReady
 from budget_agent.tools.budget import calculate_budget
-
-pytestmark = pytest.mark.xfail(
-    raises=ModuleNotReady, strict=True, reason="B 的正式预算待实现；完成后移除此标记"
-)
 
 
 def test_initial_budget_does_not_claim_payment_pass(cases):
