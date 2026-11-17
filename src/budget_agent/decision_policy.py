@@ -32,12 +32,13 @@ from budget_agent.schemas import Decision, DecisionProposal, RoleContext
 AMOUNT_LABELS = {
     "payable": r"到手价?|实付(?:金额)?|应付(?:金额)?|(?:最终|总|实际)?(?:付款|支付)(?:金额|额)?|只需|只要|最终合计|支付合计|付款合计|买到",
     "subtotal": r"原价(?:合计|小计|总价|总额)|(?:优惠前|折前)(?:合计|小计|总价|金额)|商品合计|购物篮(?:小计|总价)|小计",
-    "baseline": r"单买(?:时)?(?:的)?(?:到手价|总付款|付款额?|价格|基准)?|单独购买(?:价格|付款)?",
+    "baseline": r"(?:单买|单独买|单独购买)(?:时)?(?:的)?(?:到手价|总付款|付款额?|价格|基准)?",
     "savings": r"比单买(?:少付|节省|省下|省了|省)",
     "saving_or_discount": r"节省|少付|省下|省了|(?:支付|付款)(?:金额|额)?(?:降低|减少)(?:了)?",
     "extra": r"比单买多付",
     "discount": r"优惠减免|优惠金额|折扣金额|减免(?:了)?|优惠了",
     "discretionary": r"可(?:自由)?支配(?:预算|金额)?|可用预算",
+    "remaining_discretionary": r"(?:购买后|付款后|支付后)?(?:的)?剩余(?:的)?可(?:自由)?支配(?:预算|金额|余额|额度)?|(?:购买后|付款后|支付后)(?:的)?可(?:自由)?支配(?:预算|金额|余额|额度)?",
     "remaining": r"(?:购买后|付款后|支付后)(?:的)?(?:剩余)?(?:现金|余额)",
     "cash": r"购买前现金|当前现金|原有现金|现金余额",
     "reserve": r"预留金|备用金",
@@ -52,7 +53,16 @@ _SUFFIX_LABELS = {
         kind: pattern
         for kind, pattern in _LABELS.items()
         if kind
-        in {"baseline", "subtotal", "discretionary", "remaining", "cash", "reserve", "essential"}
+        in {
+            "baseline",
+            "subtotal",
+            "discretionary",
+            "remaining_discretionary",
+            "remaining",
+            "cash",
+            "reserve",
+            "essential",
+        }
     },
 }
 FACTUAL_EVIDENCE_KINDS = {"budget", "product", "promotion", "offer"}
@@ -118,6 +128,14 @@ def _amount_categories(text: str, mention: AmountMention) -> set[str]:
             if len(gap) <= 12 and not re.search(r"\d", gap):
                 candidates.append((match.end(), -match.start(), kind))
     categories = {max(candidates)[2]} if candidates else set()
+    # “单独买日用品组合需支付280元”仍是单买价，最近的“支付”不能覆盖这个限定。
+    # 同一分句已经有另一笔数字或切换到凑单/节省时，不沿用单买限定。
+    if categories == {"payable"}:
+        qualifiers = list(re.finditer(r"单买|单独买|单独购买", left))
+        if qualifiers and not re.search(
+            r"\d|凑单|一起|合并|少付|多付|省|降低|减少", left[qualifiers[-1].end() :]
+        ):
+            categories = {"baseline"}
     right = text[mention.end : mention.end + 20]
     for kind, pattern in _SUFFIX_LABELS.items():
         match = pattern.search(right)
@@ -141,6 +159,11 @@ def _amount_values(context: RoleContext) -> dict[str, set[int]]:
         "extra": [-savings if savings is not None and savings <= 0 else None],
         "saving_or_discount": [discount, savings if savings is not None and savings >= 0 else None],
         "discretionary": [budget.discretionary_cents],
+        "remaining_discretionary": [
+            budget.discretionary_cents - payable
+            if budget.discretionary_cents is not None and payable is not None
+            else None
+        ],
         "remaining": [budget.remaining_cash_cents],
         "cash": [profile.cash_cents],
         "reserve": [profile.reserve_cents],

@@ -226,6 +226,13 @@ def test_non_money_integers_are_not_treated_as_amounts(cases, config, products):
         ("总支付额降低了2500分", []),
         ("实际支付总额25500分，比单买28000分少付2500分", []),
         ("到手价30000分", [30000]),
+        ("相比只单独买日用品组合需支付的28000分，这套方案总共省了2500分", []),
+        ("单买时实际支付280元", []),
+        ("单独购买日用品组合需要支付255元", [25500]),
+        ("单买日用品组合较贵但凑单后只需255元", []),
+        ("购买后剩余可支配预算为4500分", []),
+        ("购买后剩余可支配预算为30000分", [30000]),
+        ("4500分的剩余可支配预算", []),
     ],
 )
 def test_amounts_are_bound_to_the_named_financial_fact(cases, config, products, text, unsupported):
