@@ -13,6 +13,10 @@
 uv run budget-agent check-model
 ```
 
+2026-11-17 已进行真实角色联调，过程、原始结果与复现命令见 [真实模型联调记录](live_validation.md)。
+完整角色响应可能超过默认 45 秒；可显式使用 `configs/validation.toml`（关闭交叉）或
+`configs/validation_cross.toml`（开启一轮），请求/流程时限为 90/540 秒，默认配置保持不变。
+
 ## A 的当前验证进度
 
 2026-11-07：A 已在本机运行上述命令并确认成功，模型为 `qwen3.8-chat`。
