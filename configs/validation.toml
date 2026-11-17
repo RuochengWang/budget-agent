@@ -1,0 +1,13 @@
+# A：按真实模型实测延长等待时间；原 default.toml 不变。
+# CLI 使用时仍显式指定 run --mode real。
+mode = "demo"
+model = "qwen3.8-chat"
+base_url = "https://api.llm.ustc.edu.cn/v1"
+request_timeout_seconds = 90
+workflow_timeout_seconds = 540
+max_tool_calls = 6
+max_output_retries = 1
+max_addon_candidates = 8
+cross_response_enabled = false
+data_dir = "data"
+output_dir = "outputs"

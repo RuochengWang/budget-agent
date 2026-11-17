@@ -209,3 +209,16 @@ def test_formal_over_budget_buy_is_overridden_without_rewriting_proposal():
     assert record.final_decision.action == "wait"
     assert record.final_decision.offer_result.payable_cents == 65000
     assert record.final_decision.budget_result.within_budget is False
+
+
+def test_observed_live_subtotal_and_savings_text_does_not_block_valid_buy():
+    # 来自真实 qwen3.8-chat 记录；280 是单买价、305 是折前小计，均不是最终付款 255。
+    record, _ = _run(
+        cross=True,
+        claims={
+            "deal": "实际支付总额为255元，比单买日用品组合的280元节省了25元。"
+            "相比购买这两件商品的原价合计（305元），该方案减少了50元的支出。",
+        },
+    )
+    assert record.final_decision.action == "buy"
+    assert record.policy_violations == []

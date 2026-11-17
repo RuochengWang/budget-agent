@@ -30,7 +30,8 @@ from budget_agent.schemas import Decision, DecisionProposal, RoleContext
 
 # 只绑定有明确名称的陈述；按最近且最长的名称区分“单买到手价”和“到手价”。
 AMOUNT_LABELS = {
-    "payable": r"到手价?|实付(?:金额)?|应付(?:金额)?|(?:最终|总|实际)?(?:付款|支付)(?:金额|额)?|只需|只要|合计|买到",
+    "payable": r"到手价?|实付(?:金额)?|应付(?:金额)?|(?:最终|总|实际)?(?:付款|支付)(?:金额|额)?|只需|只要|最终合计|支付合计|付款合计|买到",
+    "subtotal": r"原价(?:合计|小计|总价|总额)|(?:优惠前|折前)(?:合计|小计|总价|金额)|商品合计|购物篮(?:小计|总价)|小计",
     "baseline": r"单买(?:时)?(?:的)?(?:到手价|总付款|付款额?|价格|基准)?|单独购买(?:价格|付款)?",
     "savings": r"比单买(?:少付|节省|省下|省了|省)",
     "saving_or_discount": r"节省|少付|省下|省了",
@@ -43,6 +44,17 @@ AMOUNT_LABELS = {
     "essential": r"基本支出|必要支出|生活费支出",
 }
 _LABELS = {kind: re.compile(pattern) for kind, pattern in AMOUNT_LABELS.items()}
+# 后缀只识别明确的价款/预算名称。“280元节省了25元”中的“节省”描述后一个金额，
+# 不能倒过来把 280 当节省额；裸“合计”也可能是折前总价，不能一律当最终付款。
+_SUFFIX_LABELS = {
+    "payable": re.compile(r"到手价?|买到|(?:实付|应付|付款|支付)(?:金额|额)"),
+    **{
+        kind: pattern
+        for kind, pattern in _LABELS.items()
+        if kind
+        in {"baseline", "subtotal", "discretionary", "remaining", "cash", "reserve", "essential"}
+    },
+}
 FACTUAL_EVIDENCE_KINDS = {"budget", "product", "promotion", "offer"}
 LOW_URGENCY = "low"
 
@@ -107,7 +119,7 @@ def _amount_categories(text: str, mention: AmountMention) -> set[str]:
                 candidates.append((match.end(), -match.start(), kind))
     categories = {max(candidates)[2]} if candidates else set()
     right = text[mention.end : mention.end + 20]
-    for kind, pattern in _LABELS.items():
+    for kind, pattern in _SUFFIX_LABELS.items():
         match = pattern.search(right)
         if match and re.fullmatch(r"[的就能可以便即\s]*", right[: match.start()]):
             categories.add(kind)
@@ -122,6 +134,7 @@ def _amount_values(context: RoleContext) -> dict[str, set[int]]:
     savings = baseline - payable if baseline is not None and payable is not None else None
     values = {
         "payable": [payable],
+        "subtotal": [offer.subtotal_cents if offer else None],
         "baseline": [baseline],
         "discount": [discount],
         "savings": [savings if savings is not None and savings >= 0 else None],

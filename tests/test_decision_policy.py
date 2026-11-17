@@ -217,6 +217,12 @@ def test_non_money_integers_are_not_treated_as_amounts(cases, config, products):
         ("只需¥300", [30000]),
         ("比单买少付50元", [5000]),
         ("单买255元，总付款280元", [25500, 28000]),
+        ("实际支付总额为255元，比单买日用品组合的280元节省了25元。", []),
+        ("相比购买这两件商品的原价合计（305元），该方案减少了50元的支出。", []),
+        ("优惠前合计305元，到手价255元", []),
+        ("原价合计300元", [30000]),
+        ("最终合计300元", [30000]),
+        ("最终合计255元，原价合计305元", []),
     ],
 )
 def test_amounts_are_bound_to_the_named_financial_fact(cases, config, products, text, unsupported):
