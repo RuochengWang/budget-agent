@@ -2,8 +2,8 @@
 
 工具额度是全流程共享的（`ToolRegistry.traces` 里包含 A 的 calculate_budget 与
 get_products），所以本节点必须自己算"还剩几次"，并且**留 1 次给 A 在优惠节点之后
-用最终付款额重算预算**。默认 max_tool_calls=6 时，D 只有 2 次可用：
-get_promotion_rules + optimize_basket，第 5 次是 A 的复算。
+用最终付款额重算预算**。默认 max_tool_calls=6 时，D 可用 3 次，固定序列使用其中 2 次：
+get_promotion_rules + optimize_basket，第 5 次是 A 的复算，另余 1 次可用于受控补查。
 
 第一版采用固定合法序列 + 明确的退出条件（对应 docs/D/README.md「开发顺序」第 2 条）：
 不用模型规划工具，因为候选商品已被用户确认，求解器一次穷举就能给出最优解；
@@ -102,13 +102,14 @@ def run(context: RoleContext, model: ModelClient, tools: ToolRegistry) -> DealRe
     if argument.role != "deal":
         raise AgentError("优惠节点返回了不匹配的 role")
 
-    kept, dropped = filter_evidence_ids(argument.evidence_ids, known_evidence_ids(enriched))
+    _, dropped = filter_evidence_ids(argument.evidence_ids, known_evidence_ids(enriched))
     unknowns = list(argument.unknowns)
     if dropped:
-        unknowns.append("已忽略上下文中不存在的证据引用：" + "、".join(dropped))
+        unknowns.append("引用了上下文中不存在的证据：" + "、".join(dropped))
     for item in offer.unknowns:
         if item not in unknowns:
             unknowns.append(item)
-    argument = argument.model_copy(update={"evidence_ids": kept, "unknowns": unknowns})
+    # 保留非法 ID，最终 policy 才能阻断并记录；不修改原始方案金额。
+    argument = argument.model_copy(update={"unknowns": unknowns})
 
     return DealResult(argument=argument, offer=offer, evidence=evidence)

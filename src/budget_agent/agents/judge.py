@@ -8,17 +8,10 @@
 """
 
 from budget_agent.agents.base import call_role
-from budget_agent.agents.desire import filter_evidence_ids, known_evidence_ids
 from budget_agent.model_client import ModelClient
 from budget_agent.schemas import DecisionProposal, RoleContext
 
 
 def run(context: RoleContext, model: ModelClient) -> DecisionProposal:
-    proposal = call_role("judge", context, model, DecisionProposal)
-
-    kept, dropped = filter_evidence_ids(proposal.evidence_ids, known_evidence_ids(context))
-    next_steps = list(proposal.next_steps)
-    if dropped:
-        # 留痕而不是静默删除：这些 ID 会进 RunRecord，报告里可以统计。
-        next_steps.append("裁判引用了不存在的证据，已剔除：" + "、".join(dropped))
-    return proposal.model_copy(update={"evidence_ids": kept, "next_steps": next_steps})
+    # RunRecord.proposed_decision 必须是模型原始建议；校验与最终引用清理统一由 policy 完成。
+    return call_role("judge", context, model, DecisionProposal)

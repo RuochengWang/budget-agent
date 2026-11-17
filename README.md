@@ -2,8 +2,9 @@
 
 五人课程项目的**可运行协作骨架**。课堂展示为 **2026 年 11 月 21 日下午（北京时间）**。
 
-目前完成公共协议、串行流程、工具白名单、记录与回放、学校模型适配层和最小界面。
-预算、通用优惠求解、正式角色策略与评测仍由 A—E 开发。
+目前已有公共协议、串行流程、工具白名单、记录与回放、学校模型适配层和最小界面。
+B/C/D 的正式预算、优惠求解与角色已接入；真实模型开发案例联调见 [验证记录](docs/A/live_validation.md)。
+E 的完整界面、独立评测与报告仍需继续完成。
 离线演示采用脚本角色和手工复算的优惠 fixture，**不代表正式算法或模型效果**。
 
 ## A—E 统一上手顺序
@@ -77,20 +78,22 @@ Windows 若 `python` 不是 3.12，可用 `py -3.12 -m venv .venv`。
 |---|---|
 | `demo` 离线闭环、最小输入表单、证据/调用轨迹、JSON 回放 | 可用，明确标注演示 |
 | 数据模型、工具参数校验、上限与基础决策保护 | 可用，成员继续扩展 |
-| 学校文本模型适配层与 `check-model` | 基础文本和 JSON 自检已由 A 确认通过；正式集成待验证 |
-| B 的正式预算与理性节点 | 接口待实现 |
-| C 的正式数据加载与通用优惠求解 | 接口待实现 |
-| D 的正式角色、工具选择与交叉回应 | 接口待实现 |
+| 学校文本模型适配层与 `check-model` | 已做真实开发案例调用；结果与修正记录见 A 的真实联调说明 |
+| B 的正式预算与理性节点 | 已实现，已接入正式流程 |
+| C 的正式数据加载与通用优惠求解 | 已实现；当前使用明确标记的样例快照 |
+| D 的正式角色、工具序列与交叉回应 | 已实现并联调；默认关闭交叉回应，验收配置可显式开启 |
 | E 的完整界面、基线与指标、冻结测试集 | 最小入口已提供，业务待实现 |
 
 ```text
 uv run budget-agent run --case missing_profile
 uv run budget-agent run --case unknown_shipping
 uv run budget-agent run --case exact_budget
-uv run budget-agent run --mode real --case sneakers_wait
+uv run budget-agent --config configs/validation.toml run --mode real --case sneakers_wait
 ```
 
-最后一条当前会明确返回 `partial` 和 TODO，退出码为 2；不会偷偷使用演示逻辑。
+最后一条会真实调用学校模型，验收配置将等待时限延长至单次 90 秒、全流程 540 秒。
+开启一轮交叉回应可改用 `configs/validation_cross.toml`；默认配置及离线模式不变。
+失败仍返回明确状态并保留记录，不会偷偷使用演示逻辑。
 `completed` 只描述流程状态，是否演示由 `mode` 与模型标识单独说明。
 
 ## 学校模型配置（A）
@@ -150,8 +153,8 @@ uv run python -m evaluation.run --baseline M --cases data/cases/test.jsonl
 ```
 
 最后一条是待实现评测入口，当前因测试集为空退出 2，不输出虚假的评测结果。
-业务验收测试暂用严格 `xfail(raises=ModuleNotReady)` 标记；完成对应模块后应移除标记。
-不要只看测试是否全绿，要区分 `passed` 和尚待实现的 `xfailed`。
+B/C/D 已有普通验收与集成测试；其他占位模块仍需明确报错，不能用演示数据制造评测结果。
+以实际 pytest 输出为准，自动检查不等同于独立测试集上的模型效果。
 
 本次交付的具体检查结果见 [验证记录](docs/common/verification.md)。
 

@@ -103,7 +103,7 @@ def deal_argument(**overrides) -> dict:
 
 
 # --------------------------------------------------------------------- 欲望角色
-def test_desire_drops_unknown_evidence_and_records_it(cases, products):
+def test_desire_keeps_unknown_evidence_for_policy(cases, products):
     context = build_context(cases["tissue_buy"], products)
     model = ScriptModel(
         [
@@ -117,7 +117,7 @@ def test_desire_drops_unknown_evidence_and_records_it(cases, products):
         ]
     )
     argument = desire.run(context, model)
-    assert argument.evidence_ids == ["input:request"]
+    assert argument.evidence_ids == ["input:request", "product:made-up"]
     assert any("product:made-up" in item for item in argument.unknowns)
 
 
@@ -205,9 +205,7 @@ def test_deal_never_recomputes_money_itself(cases, products):
     """求解器说 25500 就是 25500；即使模型在观点里写别的数，offer 也不受影响。"""
     context = build_context(cases["tissue_buy"], products)
     tools = make_registry()
-    model = ScriptModel(
-        [deal_argument(claims=["大概两百块就能拿下吧"])]
-    )
+    model = ScriptModel([deal_argument(claims=["大概两百块就能拿下吧"])])
     result = deal.run(context, model, tools)
     assert result.offer.payable_cents == 25500
 
@@ -238,7 +236,7 @@ def test_deal_rejects_mismatched_role(cases, products):
 
 
 # --------------------------------------------------------------------- 裁判
-def test_judge_moves_forged_ids_into_next_steps(cases, products):
+def test_judge_preserves_original_proposal_for_policy(cases, products):
     context = build_context(cases["tissue_buy"], products)
     model = ScriptModel(
         [
@@ -252,9 +250,8 @@ def test_judge_moves_forged_ids_into_next_steps(cases, products):
         ]
     )
     proposal = judge.run(context, model)
-    assert proposal.evidence_ids == ["budget:initial"]
-    assert any("made-up" in step for step in proposal.next_steps)
-    assert proposal.next_steps[0] == "等三天"
+    assert proposal.evidence_ids == ["budget:initial", "made-up"]
+    assert proposal.next_steps == ["等三天"]
 
 
 # --------------------------------------------------------------------- 交叉回应
@@ -348,6 +345,38 @@ def test_cross_response_requires_evidence(cases, products):
                 "answers_role": "desire",
                 "stance": "oppose",
                 "claim": "那就在清单里只保留纸巾这一项",
+                "evidence_ids": ["input:profile"],
+            },
+        ]
+    )
+    replies = cross_response.run(context, model)
+    assert [reply.role for reply in replies] == ["rational"]
+
+
+@pytest.mark.parametrize(
+    "ids",
+    [
+        ["ghost:1"],
+        ["input:request", "ghost:1"],
+        ["budget:initial"],
+    ],
+)
+def test_cross_response_rejects_invisible_or_partially_forged_citations(cases, products, ids):
+    context = cross_context(cases, products)
+    model = ScriptModel(
+        [
+            {
+                "role": "desire",
+                "answers_role": "rational",
+                "stance": "neutral",
+                "claim": "应该先结合用户说的使用场景判断需求",
+                "evidence_ids": ids,
+            },
+            {
+                "role": "rational",
+                "answers_role": "desire",
+                "stance": "neutral",
+                "claim": "最终付款仍需在生活费约束之内核对",
                 "evidence_ids": ["input:profile"],
             },
         ]

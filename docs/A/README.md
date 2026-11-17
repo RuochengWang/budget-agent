@@ -4,6 +4,10 @@
 [总体结构](../common/overview/README.md)、[系统流程图](../common/overview/flowcharts.md)、
 [接口约定](../common/contracts.md)，然后按本文开始开发。
 
+**当前进度（2026-11-17）**：B/C/D 已接入，已完成真实模型开发案例调用与金额规则修正，
+全量检查为 131 passed。实际网络结果、原始输出重新校验和复现配置见 [真实联调记录](live_validation.md)。
+下方带 2026-11-07 日期的分步操作保留为历史教学过程，不代表当前仍卡在 B 的占位函数。
+
 具体文件与交接过程可查 [全员文件地图](../common/overview/file_map.md)。
 学校模型配置见本目录 [model_setup.md](model_setup.md)，共同排期见 [roadmap.md](../common/roadmap.md)。
 

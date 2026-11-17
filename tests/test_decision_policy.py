@@ -91,7 +91,10 @@ def test_buy_without_factual_evidence_blocks(cases, config, products):
     """只引用用户自述（input:*）不足以支撑购买建议。"""
     record = run_case(cases["tissue_buy"], config)
     proposal = DecisionProposal(
-        action="buy", reason_summary="用户说需要，那就买", evidence_ids=["input:request"], next_steps=[]
+        action="buy",
+        reason_summary="用户说需要，那就买",
+        evidence_ids=["input:request"],
+        next_steps=[],
     )
     decision, issues = apply_decision_policy(proposal, context_from_record(record, products))
     assert decision.action == "need_info"
@@ -197,3 +200,55 @@ def test_non_money_integers_are_not_treated_as_amounts(cases, config, products):
     amounts = evidence_amounts(context_from_record(record, products))
     assert 20 not in amounts
     assert 25500 in amounts
+
+
+@pytest.mark.parametrize(
+    "text,unsupported",
+    [
+        ("可支配预算300元，到手价255元，比单买少付25元", []),
+        ("单买到手价280元，实际付款255元", []),
+        ("到手价 ¥255.00", []),
+        ("255元就能到手", []),
+        ("可支配300元，购买后余额945元", []),
+        ("预留金100元，基本支出800元", []),
+        ("到手价为0元", [0]),
+        ("到手价300元，可支配预算255元", [25500, 30000]),
+        ("300元就能到手", [30000]),
+        ("只需¥300", [30000]),
+        ("比单买少付50元", [5000]),
+        ("单买255元，总付款280元", [25500, 28000]),
+        ("实际支付总额为255元，比单买日用品组合的280元节省了25元。", []),
+        ("相比购买这两件商品的原价合计（305元），该方案减少了50元的支出。", []),
+        ("优惠前合计305元，到手价255元", []),
+        ("原价合计300元", [30000]),
+        ("最终合计300元", [30000]),
+        ("最终合计255元，原价合计305元", []),
+        ("总支付额降低了2500分", []),
+        ("实际支付总额25500分，比单买28000分少付2500分", []),
+        ("到手价30000分", [30000]),
+        ("相比只单独买日用品组合需支付的28000分，这套方案总共省了2500分", []),
+        ("单买时实际支付280元", []),
+        ("单独购买日用品组合需要支付255元", [25500]),
+        ("单买日用品组合较贵但凑单后只需255元", []),
+        ("购买后剩余可支配预算为4500分", []),
+        ("购买后剩余可支配预算为30000分", [30000]),
+        ("4500分的剩余可支配预算", []),
+    ],
+)
+def test_amounts_are_bound_to_the_named_financial_fact(cases, config, products, text, unsupported):
+    record = run_case(cases["tissue_buy"], config)
+    context = context_from_record(record, products)
+    assert unsupported_amounts([text], context) == unsupported
+
+
+def test_currency_parsing_preserves_zero_negative_and_decimal_cents():
+    assert claim_amounts(["到手0元", "可支配-300元", "¥0.29", "￥1,200.01"]) == {
+        0,
+        -30000,
+        29,
+        120001,
+    }
+
+
+def test_raw_cents_are_money_but_minutes_and_fractions_are_not():
+    assert claim_amounts(["支付25500分（255元），等待20分钟，预算的4分之一"]) == {25500}

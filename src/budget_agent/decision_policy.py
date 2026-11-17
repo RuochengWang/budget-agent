@@ -5,8 +5,8 @@ D 在此基础上补三类检查（均标注 `[D]`）：
 
 1. **论点与证据内容一致性**：不只检查 ID 存在，还检查论点里出现的金额能否在证据里找到出处。
    这是"内容"层面的检查，也是裁判最容易出错的地方 —— 编一个"到手 500 元"就能翻转结论。
-   为避免误报，允许的金额集合同时包含证据中的数值与 offer 各项金额的两两差值
-   （"比单买少付 25 元"这种差值必须算合法）。
+   明确的到手价、预算、单买价及节省陈述绑定对应字段，不能因数字出现在其他字段就放行。
+   无明确类别的金额仍按证据数值检查；这不等同于任意自然语言的事实证明。
 2. **必要性策略**：低紧急度 + 已有同类物品时给出提醒并追加下一步，但**不否决** ——
    必要性是偏好问题，程序不该替用户判定"该不该想要"；能程序化判定的是钱和算术。
 3. **失败与留痕**：没有任何角色观点时不放行；否决时**保留模型原始理由**，不静默覆盖
@@ -25,14 +25,46 @@ D 在此基础上补三类检查（均标注 `[D]`）：
 import re
 from typing import Any
 
+from budget_agent.amounts import AmountMention, find_amounts
 from budget_agent.schemas import Decision, DecisionProposal, RoleContext
 
-AMOUNT_PATTERNS = (
-    # ¥500 / ￥500
-    re.compile(r"(?:¥|￥)\s*(\d[\d,]*(?:\.\d{1,2})?)"),
-    # 500 元 / 500 块 / 500 块钱
-    re.compile(r"(\d[\d,]*(?:\.\d{1,2})?)\s*(?:元|块钱|块)"),
-)
+# 只绑定有明确名称的陈述；按最近且最长的名称区分“单买到手价”和“到手价”。
+AMOUNT_LABELS = {
+    "payable": r"到手价?|实付(?:金额)?|应付(?:金额)?|(?:最终|总|实际)?(?:付款|支付)(?:金额|额)?|只需|只要|最终合计|支付合计|付款合计|买到",
+    "subtotal": r"原价(?:合计|小计|总价|总额)|(?:优惠前|折前)(?:合计|小计|总价|金额)|商品合计|购物篮(?:小计|总价)|小计",
+    "baseline": r"(?:单买|单独买|单独购买)(?:时)?(?:的)?(?:到手价|总付款|付款额?|价格|基准)?",
+    "savings": r"比单买(?:少付|节省|省下|省了|省)",
+    "saving_or_discount": r"节省|少付|省下|省了|(?:支付|付款)(?:金额|额)?(?:降低|减少)(?:了)?",
+    "extra": r"比单买多付",
+    "discount": r"优惠减免|优惠金额|折扣金额|减免(?:了)?|优惠了",
+    "discretionary": r"可(?:自由)?支配(?:预算|金额)?|可用预算",
+    "remaining_discretionary": r"(?:购买后|付款后|支付后)?(?:的)?剩余(?:的)?可(?:自由)?支配(?:预算|金额|余额|额度)?|(?:购买后|付款后|支付后)(?:的)?可(?:自由)?支配(?:预算|金额|余额|额度)?",
+    "remaining": r"(?:购买后|付款后|支付后)(?:的)?(?:剩余)?(?:现金|余额)",
+    "cash": r"购买前现金|当前现金|原有现金|现金余额",
+    "reserve": r"预留金|备用金",
+    "essential": r"基本支出|必要支出|生活费支出",
+}
+_LABELS = {kind: re.compile(pattern) for kind, pattern in AMOUNT_LABELS.items()}
+# 后缀只识别明确的价款/预算名称。“280元节省了25元”中的“节省”描述后一个金额，
+# 不能倒过来把 280 当节省额；裸“合计”也可能是折前总价，不能一律当最终付款。
+_SUFFIX_LABELS = {
+    "payable": re.compile(r"到手价?|买到|(?:实付|应付|付款|支付)(?:金额|额)"),
+    **{
+        kind: pattern
+        for kind, pattern in _LABELS.items()
+        if kind
+        in {
+            "baseline",
+            "subtotal",
+            "discretionary",
+            "remaining_discretionary",
+            "remaining",
+            "cash",
+            "reserve",
+            "essential",
+        }
+    },
+}
 FACTUAL_EVIDENCE_KINDS = {"budget", "product", "promotion", "offer"}
 LOW_URGENCY = "low"
 
@@ -78,27 +110,84 @@ def offer_differences(context: RoleContext) -> set[int]:
 
 
 def claim_amounts(texts: list[str]) -> set[int]:
-    """从自然语言里抽出金额，换算成分。
+    """抽出阿拉伯数字金额，以 Decimal 转整数分，含零与负数。"""
+    return {mention.cents for text in texts for mention in find_amounts(text)}
 
-    覆盖「500 元 / 500 块 / ¥500」三种常见写法；**不解析"两百""三百五"这类中文数字**
-    —— 中文数词解析的边界太多（"一百二"是 120 还是 102），错解析比不解析更危险。
-    提示词已要求金额只指向证据 ID、不自行换算，这一条漏口靠提示词与真实模型复测兜住。
+
+def _amount_categories(text: str, mention: AmountMention) -> set[str]:
+    """识别同一分句内紧邻金额的字段名称，不跨另一笔金额关联。
+
+    支持“到手价为 255 元”和“255 元就能到手”等常见形式。
+    中文数词、隐喻和任意语义指代不在这个有限检查器的能力范围内。
     """
-    amounts: set[int] = set()
-    for text in texts:
-        for pattern in AMOUNT_PATTERNS:
-            for match in pattern.finditer(text):
-                raw = match.group(1).replace(",", "")
-                cents = round(float(raw) * 100)
-                if cents > 0:
-                    amounts.add(cents)
-    return amounts
+    left = re.split(r"[，。；;！？!?\n]", text[: mention.start])[-1][-48:]
+    candidates = []
+    for kind, pattern in _LABELS.items():
+        for match in pattern.finditer(left):
+            gap = left[match.end() :]
+            if len(gap) <= 12 and not re.search(r"\d", gap):
+                candidates.append((match.end(), -match.start(), kind))
+    categories = {max(candidates)[2]} if candidates else set()
+    # “单独买日用品组合需支付280元”仍是单买价，最近的“支付”不能覆盖这个限定。
+    # 同一分句已经有另一笔数字或切换到凑单/节省时，不沿用单买限定。
+    if categories == {"payable"}:
+        qualifiers = list(re.finditer(r"单买|单独买|单独购买", left))
+        if qualifiers and not re.search(
+            r"\d|凑单|一起|合并|少付|多付|省|降低|减少", left[qualifiers[-1].end() :]
+        ):
+            categories = {"baseline"}
+    right = text[mention.end : mention.end + 20]
+    for kind, pattern in _SUFFIX_LABELS.items():
+        match = pattern.search(right)
+        if match and re.fullmatch(r"[的就能可以便即\s]*", right[: match.start()]):
+            categories.add(kind)
+    return categories
+
+
+def _amount_values(context: RoleContext) -> dict[str, set[int]]:
+    offer, budget, profile = context.offer, context.budget, context.case.profile
+    payable = offer.payable_cents if offer else None
+    baseline = offer.baseline_payable_cents if offer else None
+    discount = offer.discount_cents if offer else None
+    savings = baseline - payable if baseline is not None and payable is not None else None
+    values = {
+        "payable": [payable],
+        "subtotal": [offer.subtotal_cents if offer else None],
+        "baseline": [baseline],
+        "discount": [discount],
+        "savings": [savings if savings is not None and savings >= 0 else None],
+        "extra": [-savings if savings is not None and savings <= 0 else None],
+        "saving_or_discount": [discount, savings if savings is not None and savings >= 0 else None],
+        "discretionary": [budget.discretionary_cents],
+        "remaining_discretionary": [
+            budget.discretionary_cents - payable
+            if budget.discretionary_cents is not None and payable is not None
+            else None
+        ],
+        "remaining": [budget.remaining_cash_cents],
+        "cash": [profile.cash_cents],
+        "reserve": [profile.reserve_cents],
+        "essential": [budget.essential_total_cents],
+    }
+    return {kind: {value for value in items if value is not None} for kind, items in values.items()}
 
 
 def unsupported_amounts(texts: list[str], context: RoleContext) -> list[int]:
-    """找出论点里没有任何证据出处的金额，返回分值（升序）。"""
+    """检查金额存在性，并对明确的付款/预算等表述绑定字段，返回错误金额（分）。"""
     allowed = evidence_amounts(context) | offer_differences(context)
-    return sorted(claim_amounts(texts) - allowed)
+    values = _amount_values(context)
+    unsupported = set()
+    for text in texts:
+        for mention in find_amounts(text):
+            categories = _amount_categories(text, mention)
+            if (
+                categories
+                and any(mention.cents not in values[kind] for kind in categories)
+                or not categories
+                and mention.cents not in allowed
+            ):
+                unsupported.add(mention.cents)
+    return sorted(unsupported)
 
 
 def advisory_steps(action: str, context: RoleContext) -> list[str]:
@@ -148,9 +237,17 @@ def apply_decision_policy(
         add("证据 ID 重复", blocks=True)
     if not set(proposal.evidence_ids) <= evidence_ids:
         add("裁判引用了不存在的证据", blocks=True)
+    desire_visible = {"input:request", "input:profile"} | {
+        f"product:{p.id}" for p in context.products
+    }
     for argument in context.arguments:
         if not set(argument.evidence_ids) <= evidence_ids:
             add(f"{argument.role} 引用了不存在的证据", blocks=True)
+        if (
+            argument.role == "desire"
+            and (set(argument.evidence_ids) & evidence_ids) - desire_visible
+        ):
+            add("desire 引用了本角色不可见的证据", blocks=True)
 
     offer = context.offer
     if context.budget.missing_fields:
@@ -234,7 +331,9 @@ def apply_decision_policy(
     result["action"] = action
     if blocking:
         result["reason_summary"] = (
-            "程序校验调整建议：" + "；".join(blocking) + f"。原始建议理由：{proposal.reason_summary}"
+            "程序校验调整建议："
+            + "；".join(blocking)
+            + f"。原始建议理由：{proposal.reason_summary}"
         )
         # 把"要修什么"直接写成下一步，避免只给一句"补充信息后重跑"的空话。
         result["next_steps"] = [

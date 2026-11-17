@@ -4,6 +4,9 @@ B 负责 rational；C 负责优惠求解；A 负责模型适配和总控。
 先取得最新仓库，阅读 [总体结构](../common/overview/README.md)、
 [系统流程图](../common/overview/flowcharts.md) 和 [接口约定](../common/contracts.md)，再按本文开发。
 
+本文表格保留最初开发任务；四个节点现已实现并经 A 修正集成，当前实现见
+[交付说明](delivery.md)、[修复说明](review_fixes.md) 和 [真实联调记录](../A/live_validation.md)。
+
 ## 需要完成的文件
 
 以下路径相对于项目根目录。先跑通欲望、优惠与裁判节点，再补交叉回应和完整校验。

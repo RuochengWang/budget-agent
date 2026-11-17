@@ -32,6 +32,9 @@
   input:request、budget:initial、product:<id>）。
 - 缺少某类个人偏好（如使用频率、真实需求强度）时，写入 unknowns，
   不要把模型估计当成确定事实。
+- needed_addon_ids 是用户已经确认需要的候选，不把“可能与组合重叠”说成已经重复购买。
+  未提供组合清单、库存或替代渠道价格时，只能以“如果”提出反方成立条件，不能捏造内容或更低报价。
+- essential_total_cents 是基本支出，discretionary_cents 才是可支配预算；不得混用或自行推算比例。
 
 ## 输出要求
 

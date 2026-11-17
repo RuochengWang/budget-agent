@@ -136,7 +136,11 @@ def scripted_response(role: str, payload: dict) -> dict:
         role=role,
         stance="neutral",
         claims=[claims[role]],
-        evidence_ids=["offer:chosen"] if role == "deal" else ["input:request", "budget:initial"],
+        evidence_ids={
+            "desire": ["input:request"],
+            "rational": ["input:request", "budget:initial"],
+            "deal": ["offer:chosen"],
+        }[role],
     ).model_dump()
 
 

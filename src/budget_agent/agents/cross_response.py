@@ -15,7 +15,8 @@ from typing import Literal
 from pydantic import Field
 
 from budget_agent.agents.base import PROMPT_DIR
-from budget_agent.agents.desire import filter_evidence_ids, known_evidence_ids
+from budget_agent.agents.desire import build_payload
+from budget_agent.amounts import redact_amounts
 from budget_agent.errors import AgentError
 from budget_agent.model_client import ModelClient
 from budget_agent.schemas import Argument, Contract, RoleContext
@@ -56,10 +57,7 @@ def run(context: RoleContext, model: ModelClient) -> list[Argument]:
     if len(speakers) < 2:
         raise AgentError("交叉回应至少需要两个已有观点")
 
-    known = known_evidence_ids(context)
-    seen = {
-        _normalise(claim) for argument in context.arguments for claim in argument.claims
-    }
+    seen = {_normalise(claim) for argument in context.arguments for claim in argument.claims}
     prompt = load_prompt()
     replies: list[Argument] = []
 
@@ -71,18 +69,29 @@ def run(context: RoleContext, model: ModelClient) -> list[Argument]:
             for role, argument in speakers.items()
             if role != speaker
         ]
+        view = build_payload(context) if speaker == "desire" else context.model_dump(mode="json")
+        # 不再另拼一个缺少事实的上下文：实际报价和证据与前一轮来自同一个视图。
         payload = {
+            **view,
             "speaking_as": speaker,
             "my_claims": own.claims,
             "their_claims": others,
             "already_said": [claim for reply in replies for claim in reply.claims],
-            "case": context.case.model_dump(mode="json"),
-            "budget": context.budget.model_dump(mode="json"),
         }
         if speaker == "desire":
-            # 与 desire.run 保持同一条隔离规则：欲望角色回应时同样拿不到预算数字，
-            # 否则"第一轮看不到、第二轮看得到"会让隔离形同虚设。
-            payload.pop("budget")
+            # 其他角色的文字也可能复述预算，不能把这些数字重新递给欲望角色。
+            visible = {item["id"] for item in view["evidence"]}
+            payload["my_claims"] = [redact_amounts(claim) for claim in own.claims]
+            payload["their_claims"] = [
+                {
+                    **item,
+                    "claims": [redact_amounts(c) for c in item["claims"]],
+                    "evidence_ids": [eid for eid in item["evidence_ids"] if eid in visible],
+                }
+                for item in others
+            ]
+            payload["already_said"] = [redact_amounts(c) for c in payload["already_said"]]
+        known = {item["id"] for item in view["evidence"]}
         try:
             reply = model.generate_json("cross_response", prompt, payload, CrossReply)
         except AgentError:
@@ -93,8 +102,9 @@ def run(context: RoleContext, model: ModelClient) -> list[Argument]:
             continue
         if _is_repeat(reply.claim, seen):
             continue
-        evidence_ids, _ = filter_evidence_ids(reply.evidence_ids, known)
-        if not evidence_ids:
+        evidence_ids = list(dict.fromkeys(reply.evidence_ids))
+        # 混合真假引用也丢弃整条回应，不能删除假引用后把原主张当成有依据。
+        if not evidence_ids or not set(evidence_ids) <= known:
             continue
         seen.add(_normalise(reply.claim))
         replies.append(
