@@ -4,10 +4,12 @@ import re
 from dataclasses import dataclass
 from decimal import Decimal
 
-_NUMBER = r"-?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d{1,2})?"
+_INTEGER = r"-?(?:\d{1,3}(?:,\d{3})+|\d+)"
+_NUMBER = rf"{_INTEGER}(?:\.\d{{1,2}})?"
 _AMOUNT = re.compile(
     rf"(?<![\d.])(?:[¥￥]\s*(?P<prefix>{_NUMBER})(?:\s*(?:元|块钱|块))?"
-    rf"|(?P<suffix>{_NUMBER})\s*(?:元|块钱|块))"
+    rf"|(?P<suffix>{_NUMBER})\s*(?:元|块钱|块)"
+    rf"|(?P<cents>{_INTEGER})\s*分(?!钟|鐘|贝|貝|之|数|數))"
 )
 
 
@@ -19,11 +21,15 @@ class AmountMention:
 
 
 def find_amounts(text: str) -> list[AmountMention]:
-    """识别阿拉伯数字金额，包含零和负值；中文数词不在支持范围内。"""
+    """识别元与整数分，包含零和负值；不把“分钟”“分之一”当作钱。"""
     return [
         AmountMention(
-            cents=int(
-                Decimal((match.group("prefix") or match.group("suffix")).replace(",", "")) * 100
+            cents=(
+                int(match.group("cents").replace(",", ""))
+                if match.group("cents") is not None
+                else int(
+                    Decimal((match.group("prefix") or match.group("suffix")).replace(",", "")) * 100
+                )
             ),
             start=match.start(),
             end=match.end(),

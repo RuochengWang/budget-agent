@@ -223,6 +223,9 @@ def test_non_money_integers_are_not_treated_as_amounts(cases, config, products):
         ("原价合计300元", [30000]),
         ("最终合计300元", [30000]),
         ("最终合计255元，原价合计305元", []),
+        ("总支付额降低了2500分", []),
+        ("实际支付总额25500分，比单买28000分少付2500分", []),
+        ("到手价30000分", [30000]),
     ],
 )
 def test_amounts_are_bound_to_the_named_financial_fact(cases, config, products, text, unsupported):
@@ -238,3 +241,7 @@ def test_currency_parsing_preserves_zero_negative_and_decimal_cents():
         29,
         120001,
     }
+
+
+def test_raw_cents_are_money_but_minutes_and_fractions_are_not():
+    assert claim_amounts(["支付25500分（255元），等待20分钟，预算的4分之一"]) == {25500}

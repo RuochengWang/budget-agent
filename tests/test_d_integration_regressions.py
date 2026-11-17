@@ -169,8 +169,8 @@ def test_desire_cross_response_gets_visible_facts_without_budget_round_trip():
     record, captured = _run(
         cross=True,
         claims={
-            "rational": "可支配预算300元，不应挪用生活费",
-            "deal": "最终付款为255元，明细来自求解器",
+            "rational": "可支配预算30000分，不应挪用生活费",
+            "deal": "最终付款为25500分（255元），明细来自求解器",
         },
     )
     payload = next(
@@ -183,7 +183,7 @@ def test_desire_cross_response_gets_visible_facts_without_budget_round_trip():
     assert all("price_cents" not in product for product in payload["products"])
     assert {e["id"] for e in payload["evidence"]} >= {"input:request", "input:profile"}
     assert all(
-        "300元" not in claim and "255元" not in claim
+        all(value not in claim for value in ["300元", "255元", "30000分", "25500分"])
         for item in payload["their_claims"]
         for claim in item["claims"]
     )
