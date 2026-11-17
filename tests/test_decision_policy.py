@@ -91,7 +91,10 @@ def test_buy_without_factual_evidence_blocks(cases, config, products):
     """只引用用户自述（input:*）不足以支撑购买建议。"""
     record = run_case(cases["tissue_buy"], config)
     proposal = DecisionProposal(
-        action="buy", reason_summary="用户说需要，那就买", evidence_ids=["input:request"], next_steps=[]
+        action="buy",
+        reason_summary="用户说需要，那就买",
+        evidence_ids=["input:request"],
+        next_steps=[],
     )
     decision, issues = apply_decision_policy(proposal, context_from_record(record, products))
     assert decision.action == "need_info"
@@ -197,3 +200,35 @@ def test_non_money_integers_are_not_treated_as_amounts(cases, config, products):
     amounts = evidence_amounts(context_from_record(record, products))
     assert 20 not in amounts
     assert 25500 in amounts
+
+
+@pytest.mark.parametrize(
+    "text,unsupported",
+    [
+        ("可支配预算300元，到手价255元，比单买少付25元", []),
+        ("单买到手价280元，实际付款255元", []),
+        ("到手价 ¥255.00", []),
+        ("255元就能到手", []),
+        ("可支配300元，购买后余额945元", []),
+        ("预留金100元，基本支出800元", []),
+        ("到手价为0元", [0]),
+        ("到手价300元，可支配预算255元", [25500, 30000]),
+        ("300元就能到手", [30000]),
+        ("只需¥300", [30000]),
+        ("比单买少付50元", [5000]),
+        ("单买255元，总付款280元", [25500, 28000]),
+    ],
+)
+def test_amounts_are_bound_to_the_named_financial_fact(cases, config, products, text, unsupported):
+    record = run_case(cases["tissue_buy"], config)
+    context = context_from_record(record, products)
+    assert unsupported_amounts([text], context) == unsupported
+
+
+def test_currency_parsing_preserves_zero_negative_and_decimal_cents():
+    assert claim_amounts(["到手0元", "可支配-300元", "¥0.29", "￥1,200.01"]) == {
+        0,
+        -30000,
+        29,
+        120001,
+    }
