@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import subprocess
 
 from budget_agent.config import PROJECT_ROOT
 from evaluation import rehearsal_check
@@ -68,3 +69,22 @@ def test_main_json_mode_and_strict_exit(monkeypatch, capsys):
     assert printed["checks"]
     assert main(["--strict"]) == 2
     assert main([]) == 0
+
+
+def test_clean_git_working_tree_is_reported_clean(tmp_path, monkeypatch):
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+    monkeypatch.chdir(tmp_path)
+    check = next(item for item in collect()["checks"] if item["item"] == "工作区干净")
+    assert check["status"] == "OK"
+    assert check["detail"] == "无未提交改动"
+
+
+def test_unreadable_git_status_does_not_claim_zero_changes(monkeypatch):
+    def unreadable(*args, **kwargs):
+        raise subprocess.CalledProcessError(128, ["git", *args])
+
+    monkeypatch.setattr(rehearsal_check.subprocess, "run", unreadable)
+    check = next(item for item in collect()["checks"] if item["item"] == "工作区干净")
+    assert check["status"] == "TODO"
+    assert "无法读取" in check["detail"]
+    assert "0 处改动" not in check["detail"]

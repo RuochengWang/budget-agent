@@ -19,7 +19,7 @@ B/C/D 和 A 的真实联调修复均已合并；正式实验仍待两人独立�
 | [evaluation/human_rubric.md](../../evaluation/human_rubric.md) | 流程已落实 | 匿名化映射、双 seed 随机排序、评分记录格式、汇总披露；评分数据待 11/17—18 生成 |
 | [data/cases/dev.jsonl](../../data/cases/dev.jsonl) | 已有 10 个开发案例 | 已覆盖预算不足/恰好、重复需求、凑单省钱/多花、活动过期、运费未知、缺字段；继续补真实场景 |
 | [data/cases/test.jsonl](../../data/cases/test.jsonl) | 已有 30 例候选，**待两人独立人工复核** | 逐例复算并记录复核人、实际日期和冻结 commit；冻结后不再改数值 |
-| [data/cases/labels.jsonl](../../data/cases/labels.jsonl) | 已有 40 条草案（dev 10 + test 30，全部 `draft`） | 30 个测试标签已用独立算术程序对照，无数值差异；程序复算不代替两人复核，标签不传给模型 |
+| [data/cases/labels.jsonl](../../data/cases/labels.jsonl) | 已有 40 条草案（dev 10 + test 30，全部 `draft`） | 集成修正 3 条基本支出并补独立公式回归；其余客观字段仍待复核，标签不传给模型 |
 | [data/cases/README.md](../../data/cases/README.md) | 已补覆盖矩阵与冻结流程 | dev 10 例、test 30 例候选、labels 格式、11/16 双人复核占位表；另见 [review_sheet.md](../../data/cases/review_sheet.md) 的 30 例逐例参考算术 |
 | [tests/test_ui.py](../../tests/test_ui.py) | 已补关键输入、缺失值与回放验收 | 覆盖空白与 0 的区分、案例切换、正式模式 partial 与历史回放 |
 | [docs/E/demo.md](demo.md) | 已完善 20 分钟脚本 | 实验数字、展示人分配与录像路径为 TODO，11/19–20 填入 |
@@ -48,7 +48,8 @@ UI 统一调用 `run_case()`，不在界面重写预算或优惠计算。默认�
 基线接口见 baselines.py：B0 规则、B1 单模型、B2 单 Agent+工具、M 完整系统、M_no_cross 消融。
 与 A 商定同模型/快照/工具额度；B0 可不调用模型，但仍需正式预算与求解器。
 预算正确率、优惠可行/最优金额、约束违规、证据、缺信息识别、耗时/调用用量分别报告。
-每个指标写清分母、有效样本数；不把未运行样本记为正确。
+每个指标写清分母、有效样本数；存在有效样本时 `rate=correct/total`，未运行或无最终建议的样本保留在分母，
+有效样本为零时 `rate=None`。任一请求缺少用量字段，该字段的完整总量为 `None`，不显示部分和。
 人工评分使用 human_rubric.md，两人盲评、随机顺序，披露组内评价。
 没有价格依据就报告 tokens，不自行换算费用。
 
@@ -71,3 +72,5 @@ UI 可用 demo 独立开发；正式评测等待可用的本地模型密钥、A 
 验收：可加载案例、缺失值清楚、错误可见、同一案例可对照、真实指标可复现、能回放。
 运行 `uv run pytest tests/test_ui.py tests/test_cases.py tests/test_evaluation.py`；Windows/macOS 各找组员实际启动一次。
 11/20 准备离线替身、真实历史回放与备用录像，展示状态要如实标明。
+
+PR #7 的导入、指标、标签与彩排自检修正见 [集成修正记录](integration_fixes.md)。

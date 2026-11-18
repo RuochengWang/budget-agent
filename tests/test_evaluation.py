@@ -73,7 +73,7 @@ def make_label(case_id: str = "case_a", *, payable: int | None = 28000,
 
 
 def make_record(case: CaseInput, *, action: str = "buy", payable: int | None = 28000,
-                within: bool = True, missing: list[str] | None = None,
+                within: bool | None = True, missing: list[str] | None = None,
                 mode: str = "real", status: str = "completed",
                 evidence_ids: list[str] | None = None, usage: dict | None = None) -> RunRecord:
     budget = BudgetResult(
@@ -175,6 +175,21 @@ def test_metrics_not_run_counts_in_denominator_but_never_correct():
     assert metric["rate"] is None and metric["not_run"] == 1
 
 
+@pytest.mark.parametrize("has_incomplete_record", [False, True])
+def test_metrics_partial_coverage_uses_all_applicable_labels(has_incomplete_record):
+    records = [make_record(make_case("a"))]
+    if has_incomplete_record:
+        incomplete = make_record(make_case("b"), status="partial")
+        incomplete.final_decision = None
+        records.append(incomplete)
+    result = compute_metrics(records, [make_label("a"), make_label("b")])
+    for key in ("budget_correct", "offer_optimal_amount", "offer_basket",
+                "offer_feasible", "evidence_valid"):
+        assert result["metrics"][key] == {
+            "correct": 1, "valid": 1, "total": 2, "not_run": 1, "rate": 0.5,
+        }
+
+
 def test_metrics_unmatched_record_is_not_scored():
     label = make_label("case_a")
     label["budget"].pop("remaining_cents")
@@ -191,6 +206,52 @@ def test_metrics_detect_wrong_amount_and_constraint_violation():
     result = compute_metrics([record], [label])
     assert result["metrics"]["offer_optimal_amount"]["correct"] == 0
     assert result["metrics"]["constraint_violations"]["count"] >= 1
+
+
+@pytest.mark.parametrize("within", [None, False])
+def test_buy_requires_an_explicit_budget_pass(within):
+    record = make_record(make_case(), within=within)
+    metric = compute_metrics([record], [make_label()])["metrics"]["constraint_violations"]
+    assert any("预算未明确通过" in item for item in metric["cases"])
+
+
+@pytest.mark.parametrize("update", [
+    {"verified": False}, {"verification_method": "unverified"},
+    {"verification_method": "demo_fixture"}, {"unknowns": ["活动条件未知"]},
+    {"subtotal_cents": None}, {"discount_cents": None},
+    {"shipping_cents": None}, {"payable_cents": None},
+])
+def test_buy_requires_a_confirmed_offer_and_payment(update):
+    record = make_record(make_case())
+    decision = record.final_decision
+    decision.offer_result = decision.offer_result.model_copy(update=update)
+    metric = compute_metrics([record], [make_label()])["metrics"]["constraint_violations"]
+    assert any("方案或付款明细尚未确认" in item for item in metric["cases"])
+
+
+def test_buy_cannot_assume_a_missing_offer_or_unknown_input_shipping():
+    for missing_offer in (True, False):
+        record = make_record(make_case())
+        if missing_offer:
+            record.final_decision.offer_result = None
+        else:
+            record.input.request.shipping_cents = None
+        metric = compute_metrics([record], [make_label()])["metrics"]["constraint_violations"]
+        assert any("方案或付款明细尚未确认" in item for item in metric["cases"])
+
+
+@pytest.mark.parametrize("action", ["wait", "skip", "need_info"])
+def test_non_buy_does_not_require_a_confirmed_purchase(action):
+    record = make_record(make_case(), action=action, payable=None, within=None)
+    metric = compute_metrics([record], [make_label()])["metrics"]["constraint_violations"]
+    assert metric["count"] == 0
+
+
+def test_solver_on_sample_catalog_is_distinct_from_demo_execution():
+    record = make_record(make_case())
+    record.final_decision.offer_result.is_demo = True  # 样例商品，不是演示替身。
+    metric = compute_metrics([record], [make_label()])["metrics"]["constraint_violations"]
+    assert metric["count"] == 0
 
 
 def test_metrics_missing_info_detection():
@@ -210,6 +271,41 @@ def test_metrics_usage_missing_fields_stay_none():
     result = compute_metrics([make_record(make_case(), usage={"prompt_tokens": None})], [])
     assert result["usage"]["tokens"]["total_tokens"] is None
     assert "total_tokens" in result["usage"]["missing_usage_fields"]
+
+
+def test_partial_usage_is_not_reported_as_a_complete_total():
+    record = make_record(make_case())
+    record.model_calls = [
+        ModelTrace(role="judge", model="test", elapsed_ms=0,
+                   usage={"prompt_tokens": 80, "completion_tokens": 20, "total_tokens": 100}),
+        ModelTrace(role="judge", model="test", elapsed_ms=0,
+                   usage={"prompt_tokens": 10}),
+    ]
+    usage = compute_metrics([record], [make_label()])["usage"]
+    assert usage["tokens"] == {
+        "prompt_tokens": 90, "completion_tokens": None, "total_tokens": None,
+    }
+    assert usage["missing_usage_fields"] == ["completion_tokens", "total_tokens"]
+
+
+def test_usage_missing_in_another_record_also_invalidates_the_total():
+    first, second = make_record(make_case("a")), make_record(make_case("b"))
+    second.model_calls[0].usage = {}
+    usage = compute_metrics([first, second], [])["usage"]
+    assert usage["model_calls"] == 2
+    assert usage["tokens"]["total_tokens"] is None
+
+
+def test_zero_usage_is_a_known_value_and_can_be_summed():
+    record = make_record(make_case())
+    record.model_calls[0].usage = {
+        "prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0,
+    }
+    usage = compute_metrics([record], [])["usage"]
+    assert usage["tokens"] == {
+        "prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0,
+    }
+    assert usage["missing_usage_fields"] == []
 
 
 def test_baseline_plan_and_available_registry():

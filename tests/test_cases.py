@@ -123,3 +123,19 @@ def test_review_sheet_covers_all_test_cases():
     test = load_cases(CASES_DIR / "test.jsonl")
     for case in test:
         assert f"| {case.case_id} |" in sheet
+
+
+def test_essential_labels_depend_only_on_days_daily_and_fixed_expenses():
+    # 独立按输入公式检查；不使用被评估的 B/C 实现给标签生成标准答案。
+    cases = {
+        case.case_id: case
+        for name in ("dev.jsonl", "test.jsonl")
+        for case in load_cases(CASES_DIR / name)
+    }
+    for label in _read_labels():
+        profile = cases[label["case_id"]].profile
+        days, daily, fixed = (
+            profile.days_remaining, profile.daily_essential_cents, profile.fixed_expenses_cents,
+        )
+        expected = days * daily + fixed if all(v is not None for v in (days, daily, fixed)) else None
+        assert label["budget"]["essential_total_cents"] == expected, label["case_id"]

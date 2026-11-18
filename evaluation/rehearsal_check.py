@@ -25,7 +25,7 @@ def _git(*args: str) -> str | None:
         result = subprocess.run(
             ["git", *args], capture_output=True, text=True, check=True, timeout=5
         )
-        return result.stdout.strip() or None
+        return result.stdout.strip()
     except (OSError, subprocess.SubprocessError):
         return None
 
@@ -46,9 +46,15 @@ def collect(config_path: Path | None = None) -> dict:
     ))
 
     dirty = _git("status", "--porcelain")
+    if dirty is None:
+        status_detail = "无法读取 Git 工作区状态，请检查仓库目录和 Git 是否可用"
+    elif dirty == "":
+        status_detail = "无未提交改动"
+    else:
+        status_detail = f"有 {len(dirty.splitlines())} 处改动，冻结版本应提交后再彩排"
     out.append(_check(
         "工作区干净", dirty == "",
-        "无未提交改动" if dirty == "" else f"有 {len((dirty or '').splitlines())} 处改动，冻结版本应提交后再彩排",
+        status_detail,
     ))
 
     dev = load_cases(config.data_dir / "cases" / "dev.jsonl")

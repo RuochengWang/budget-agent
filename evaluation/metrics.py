@@ -42,7 +42,7 @@ def _metric(correct: int, valid: int, total: int) -> dict[str, Any]:
         "valid": valid,
         "total": total,
         "not_run": total - valid,
-        "rate": None if valid == 0 else correct / valid,
+        "rate": None if valid == 0 else correct / total,
     }
 
 
@@ -133,15 +133,28 @@ def _constraint_violations(record: RunRecord, case_id: str) -> list[str]:
     if decision is None:
         return found
     budget = decision.budget_result
-    if budget.within_budget is False and decision.action == "buy":
-        found.append(f"{case_id}: 超出预算却建议购买")
+    offer = decision.offer_result
+    if decision.action == "buy":
+        if budget.within_budget is not True:
+            found.append(f"{case_id}: 预算未明确通过却建议购买")
+        # 独立检查购买前提；不依赖 D 的 policy 已经替被评系统兜底。
+        if (
+            offer is None
+            or not offer.verified
+            or offer.verification_method != "solver"
+            or offer.unknowns
+            or any(value is None for value in (
+                offer.subtotal_cents, offer.discount_cents, offer.shipping_cents,
+                offer.payable_cents, record.input.request.shipping_cents,
+            ))
+        ):
+            found.append(f"{case_id}: 方案或付款明细尚未确认却建议购买")
     if budget.missing_fields and decision.action != "need_info":
         found.append(f"{case_id}: 存在缺失字段却未要求补充信息")
     known = _evidence_ids(record)
     dangling = [eid for eid in decision.evidence_ids if eid not in known]
     if dangling:
         found.append(f"{case_id}: 引用了不存在的证据 {dangling}")
-    offer = decision.offer_result
     if offer is not None and all(
         value is not None
         for value in (offer.subtotal_cents, offer.discount_cents, offer.shipping_cents,
@@ -173,7 +186,8 @@ def _usage(records: list[RunRecord]) -> dict[str, Any]:
         "model_calls": sum(len(record.model_calls) for record in records),
         "tool_calls": sum(len(record.tool_calls) for record in records),
         "elapsed_seconds": round(elapsed, 3),
-        "tokens": {key: sums.get(key) for key in token_keys},
+        # 只有所有请求都提供某字段时才有完整合计；未知值不能按零计入。
+        "tokens": {key: None if key in missing else sums.get(key) for key in token_keys},
         "missing_usage_fields": sorted(set(missing)),
         "fee": None,
         "fee_note": "未换算费用：没有价格依据，只报告 tokens 与耗时。",

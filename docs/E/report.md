@@ -33,9 +33,9 @@
 - 基线：B0 规则、B1 单模型、B2 单 Agent+工具、M 完整系统、M_no_cross 消融；
   口径见 `evaluation/baselines.py` 的 `baseline_plan()`。
 - 客观指标：`evaluation/metrics.py`，每项自带 `total / valid / correct / not_run / rate`；
-  未运行样本只进分母，不记为正确；有效样本为 0 时 `rate=None`，不返回 0 或 100%。
+  存在有效样本时 `rate=correct/total`，未运行或无最终建议的样本保留在分母；有效样本为 0 时 `rate=None`。
 - 主观评分：`evaluation/human_rubric.md`，两人盲评、匿名输出、随机顺序、披露组内评价。
-- 成本：只报告 tokens 与耗时，缺失字段写"未提供"，**不自行换算费用**。
+- 成本：只报告 tokens 与耗时；任一请求缺某字段，该字段的完整合计写"未提供"，不以部分和代替，**不自行换算费用**。
 
 ## 3. 实验设置（E 填写，A 确认）
 

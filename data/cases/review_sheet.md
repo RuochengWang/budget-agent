@@ -3,8 +3,10 @@
 > 用途：两位复核人**不要看本表的结论列**，先按公式自己算，
 > 再把结果与「参考」列对照；分歧写入「复核记录」。
 > 本表与 [标签草案](labels.jsonl) 依据 [接口契约](../../docs/common/contracts.md) 的公式整理。
-> 2026-11-18 已用独立算术程序从输入和商品/活动快照复算，30/30 条客观字段与草案一致。
-> 未调用 C 的求解器或学校模型；**这不是两位组员的人工复核，也不是模型准确率。**
+> 2026-11-18 集成检查修正了 `t_missing_cash`、`t_missing_reserve` 的基本支出标签与本表；
+> 开发集 `missing_profile` 同步修正。原“30/30 条客观字段一致”的结论不再沿用。
+> 新增的独立公式回归检查全部 40 条基本支出，不验证优惠最优性；未调用 C 求解器或学校模型。
+> **这不是两位组员的人工复核，也不是模型准确率。**
 > 两位复核人必须独立复算并修正草案后，才能把 `review_status` 改为 `reviewed`；
 > 复核通过后再填写本文件末尾的冻结记录。
 > 金额单位均为**分**，时间均为 `+08:00`，活动有效期半开区间
@@ -20,7 +22,9 @@ discretionary  = cash_cents − essential − reserve_cents      （可为负，
 优惠            = 有效期内、同商家、达到门槛；两条满减不可叠加，取更优者
 并列最优        = 付款额 → 凑单件数 → basket_ids 字典序 → rule_ids 字典序
 运费未知        = 应付总额 None，feasible=None，期望 need_info
-缺任一预算字段  = essential/discretionary/within_budget 均 None，期望 need_info
+缺任一预算字段  = missing_fields 列出缺项，依赖该字段的结果为 None，期望 need_info
+基本支出         = 只依赖天数、每日基本开支、固定支出；现金/预留金缺失不影响 essential
+缺字段提前停止   = 未调用方案求解，discretionary/remaining_cash/within_budget 无法确认
 ```
 
 商品：`sneakers=80000`、`daily_goods=28000`、`tissue=2500`、`large_addon=8000`。
@@ -37,11 +41,11 @@ discretionary  = cash_cents − essential − reserve_cents      （可为负，
 | t_over_budget_large_gap | 80000 | 5000 | 65000 | sneakers | shoes-150 | 大额缺口 |
 | t_over_budget_after_discount | 70000 | 45000 | 65000 | sneakers | shoes-150 | 满减后仍超 |
 | t_negative_discretionary | 78000 | -33000 | 2500 | tissue | — | 不可截断为 0 |
-| t_missing_cash | None | None | None | — | — | missing=cash_cents |
+| t_missing_cash | 84800 | None | None | — | — | missing=cash_cents，不影响基本支出 |
 | t_missing_days | None | None | None | — | — | missing=days_remaining |
 | t_missing_daily_essential | None | None | None | — | — | missing=daily_essential_cents |
 | t_missing_fixed_expenses | None | None | None | — | — | missing=fixed_expenses_cents |
-| t_missing_reserve | None | None | None | — | — | missing=reserve_cents |
+| t_missing_reserve | 96000 | None | None | — | — | missing=reserve_cents，不影响基本支出 |
 | t_shipping_unknown_single | 100000 | 40000 | None | — | — | 运费未知 |
 | t_shipping_unknown_basket | 110000 | 60000 | None | — | — | 运费未知 |
 | t_shipping_zero_known | 90000 | 50000 | 28000 | daily_goods | — | 0 ≠ 未知 |
