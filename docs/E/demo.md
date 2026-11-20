@@ -119,7 +119,7 @@ uv run streamlit run app.py            # 端口占用时加 --server.port 8502
 - [x] **`real` 状态如实**：无本机密钥即 `partial`，不退回 demo（见上表第 3 条记录）。
 - [ ] **Streamlit 两页**：`tests/test_ui.py` 通过（含在 199 通过内）；冻结版本未手动开浏览器走查，端口 8501/8502 未实测。
 - [ ] **完整彩排两遍**：未进行（需 20 分钟计时 + 断网演练，人工执行）。
-- [x] **自检结果已保存**：`docs/E/rehearsal_2026-11-20.json`（`--json` 输出）。
+- [x] **自检结果已保存**：`docs/E/rehearsal_2026-11-20.json`（`--json` 输出；生成物不入库，换机需重跑）。
 - [ ] **备用录像**：未录制（TODO：路径，例如 `docs/E/录像-2026-11-20.mp4`；是否入库按组内约定）。
 - [x] **测试与静态检查（冻结版本实测 2026-11-20）**：`.venv/bin/python -m pytest -q` → **199 passed**；`.venv/bin/python -m ruff check .` → **All checks passed**；`git diff --check` 通过。
 - [ ] **现场设备**：投影/字号/电源/麦克风未检查；A 需确认调用额度与模型配置（不写密钥）。
