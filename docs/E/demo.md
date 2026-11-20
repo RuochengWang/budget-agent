@@ -2,7 +2,7 @@
 
 **展示**：2026-11-21（周六）下午，Asia/Shanghai；总时长 20 分钟。11/20 冻结展示版本并完整彩排，11/21 上午只修展示阻塞问题。具体上课时间待 A 补充（[路线图](../common/roadmap.md)）。E 维护并整合；**实验数字全部为 TODO 占位，冻结前不得填估计值**。
 
-**当前状态（2026-11-20 冻结）**：冻结代码版本 `2bcee375ff09a80180bfca7433afb8af02da2945`（tag `demo-2026-11-21`，见第 8 节）；PR #1—#8 全部合并，主线 199 通过、Ruff 通过。`demo` 演示替身 10 个开发案例可运行；`real` 正式模式已接入 A/B/C/D，本机无 `.env` 密钥时如实返回 `partial`；冻结版本已生成 3 条历史记录（附录 2）。评测基线（B0/B1/B2/M/M_no_cross）与真实实验数字仍待完成，40 条标签仍为 `draft`。**演示替身不代表正式算法或模型效果。**
+**当前状态（2026-11-20 冻结）**：冻结版本 tag `demo-2026-11-21`（`git rev-parse HEAD` 摘要见第 8 节），代码与主线 `2bcee375ff09a80180bfca7433afb8af02da2945` 一致，冻结提交只改 `docs/E` 与 `data/cases`；PR #1—#8 全部合并，主线 199 通过、Ruff 通过。`demo` 演示替身 10 个开发案例可运行；`real` 正式模式已接入 A/B/C/D，本机无 `.env` 密钥时如实返回 `partial`；冻结版本已生成 3 条历史记录（附录 2）。评测基线（B0/B1/B2/M/M_no_cross）与真实实验数字仍待完成，40 条标签仍为 `draft`。**演示替身不代表正式算法或模型效果。**
 
 ## 1. 分钟级时间轴（六段合计 20 分钟）
 | 时间段 | 分钟 | 主讲 | 内容与操作 |
@@ -109,7 +109,7 @@ uv run streamlit run app.py            # 端口占用时加 --server.port 8502
 贡献按实际提交与验收记录填写（截至 2026-11-20，`git log` 与 PR 记录）：A — 提交 10 个（PR #1/#2/#6，合并与修复 #3—#8）；B — PR #4（预算工具与理性角色）；C — PR #3（商品/活动查询与求解器）；D — PR #5（四角色、决策校验）；E — PR #7 + 修正 #8（界面、案例、评测、演示，29 文件）。**预定分工不等于最终贡献**；展示人分配按第 1 节时间轴执行，11/20 彩排按最终版走位。
 
 ## 8. 11/20 冻结与彩排检查清单
-- [x] **冻结完成**：`git rev-parse HEAD` = `2bcee375ff09a80180bfca7433afb8af02da2945`，tag `demo-2026-11-21`（PR #1—#8 已全部合并到主线）。
+- [x] **冻结完成**：tag `demo-2026-11-21` 指向冻结提交（`git rev-parse HEAD` 现场核对）；其代码部分与主线 `2bcee375ff09a80180bfca7433afb8af02da2945` 一致，冻结提交只改 `docs/E` 与 `data/cases`，未动 `src/`、`tests/`、`configs/`；PR #1—#8 已全部合并。
 - [x] **3 条冻结版本历史记录**（2026-11-20 生成，均在上述 commit 上）：
   - `outputs/21aebf1d0dc3472ba8db0f34d9481d71.json` — sneakers_wait，`mode=demo`，`status=completed`，建议 wait
   - `outputs/2b30e37ebc3944d88e6ec3bdf6447ce9.json` — tissue_buy，`mode=demo`，`status=completed`，建议 buy
