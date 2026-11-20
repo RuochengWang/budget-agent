@@ -2,7 +2,7 @@
 
 **展示**：2026-11-21（周六）下午，Asia/Shanghai；总时长 20 分钟。11/20 冻结展示版本并完整彩排，11/21 上午只修展示阻塞问题。具体上课时间待 A 补充（[路线图](../common/roadmap.md)）。E 维护并整合；**实验数字全部为 TODO 占位，冻结前不得填估计值**。
 
-**当前状态（2026-11-17，B/C/D 的 PR #3/#4/#5 均已合并）**：`demo` 演示替身 10 个开发案例可运行；`real` 正式模式已接入 B 预算、C 求解器、D 角色，本机若未配置 `.env` 的模型密钥会如实返回 `partial`；评测基线（B0/B1/B2/M/M_no_cross）与真实实验数字仍待完成。**演示替身不代表正式算法或模型效果。**
+**当前状态（2026-11-20 冻结）**：冻结代码版本 `2bcee375ff09a80180bfca7433afb8af02da2945`（tag `demo-2026-11-21`，见第 8 节）；PR #1—#8 全部合并，主线 199 通过、Ruff 通过。`demo` 演示替身 10 个开发案例可运行；`real` 正式模式已接入 A/B/C/D，本机无 `.env` 密钥时如实返回 `partial`；冻结版本已生成 3 条历史记录（附录 2）。评测基线（B0/B1/B2/M/M_no_cross）与真实实验数字仍待完成，40 条标签仍为 `draft`。**演示替身不代表正式算法或模型效果。**
 
 ## 1. 分钟级时间轴（六段合计 20 分钟）
 | 时间段 | 分钟 | 主讲 | 内容与操作 |
@@ -45,6 +45,8 @@ uv run streamlit run app.py            # 端口占用时加 --server.port 8502
 - `run` 会把记录保存到 `outputs/<run_id>.json` 并打印路径；`replay` 只读记录、不调用模型。
 - 界面顶部「页面」只有两页：**「运行」**（加载开发案例、改表单、运行并保存）与**「历史回放」**（选择 `outputs/` 记录回放，显示「不是本次推理」警告）。
 - 不用 uv 的机器：把 `uv run budget-agent` 换成仓库内 `.venv/bin/budget-agent`（Windows 用 `.venv\Scripts\budget-agent.exe`），Streamlit 同理。
+- **本机实测（2026-11-20 冻结版本）**：`uv run` 会因 `~/.cache/uv` 只读而报 `Could not acquire lock … Read-only file system`。先 `export UV_CACHE_DIR=/tmp/uvcache` 即可（已验证 `list-cases`、`run` 正常）；现场来不及排查就直接走 `.venv/bin/budget-agent`。
+- 冻结版本实测：`.venv/bin/budget-agent list-cases` 输出 10 个开发案例，`run --case sneakers_wait` 打印「建议=wait」，`run --mode real` 在无密钥时打印 `状态=partial` 与"请在本机 .env 中填写 BUDGET_AGENT_API_KEY"。
 
 ## 3. 主案例讲法（6 分钟）
 ### 3.1 sneakers_wait：优惠后仍超预算 → 等待（B，5:00—8:00）
@@ -104,25 +106,30 @@ uv run streamlit run app.py            # 端口占用时加 --server.port 8502
 | D | 欲望/优惠/裁判角色、交叉回应、程序约束检查 | 14:00—18:00 失败案例与对照 |
 | E | 界面、案例、评测、报告与演示，负责整合 | 0:00—2:00、11:00—14:00、18:00—19:00（与 A—D 各 10 秒）、19:00—20:00 |
 
-贡献按实际提交与验收记录填写（TODO：代表提交/PR、验收记录、报告段落）；预定分工不等于最终贡献。展示人分配 11/19 全员确认，11/20 彩排按最终版走位。
+贡献按实际提交与验收记录填写（截至 2026-11-20，`git log` 与 PR 记录）：A — 提交 10 个（PR #1/#2/#6，合并与修复 #3—#8）；B — PR #4（预算工具与理性角色）；C — PR #3（商品/活动查询与求解器）；D — PR #5（四角色、决策校验）；E — PR #7 + 修正 #8（界面、案例、评测、演示，29 文件）。**预定分工不等于最终贡献**；展示人分配按第 1 节时间轴执行，11/20 彩排按最终版走位。
 
 ## 8. 11/20 冻结与彩排检查清单
-- [ ] 11/20 上午合并展示相关 PR，冻结 commit 并打 tag；记录 `git rev-parse HEAD` 与 tag 名（TODO）。
-- [ ] 11/20 下午在冻结版本生成 3 条真实历史记录（sneakers_wait、tissue_buy、real partial），路径记入文末附录（TODO：`outputs/<run_id>.json`）。
-- [ ] 依赖离线可用（`uv sync --frozen --extra dev --extra ui` 通过、断网可启动）；`uv run budget-agent list-cases` 输出 10 个开发案例，第 3 节数字与冻结版本一致。
-- [ ] `real` 的状态与错误指向按当天集成进度如实更新（B/C/D 已集成，当前缺本机模型密钥）；11/20 用冻结版本重测后更新第 3、4、6 节。
-- [ ] Streamlit 两页可用（运行 / 历史回放），端口 8501 正常、8502 备用；`outputs/` 记录可回放。
-- [ ] 完整彩排两遍：20 分钟计时；第二遍模拟断网、只允许历史回放。
-- [ ] 运行 `.venv/bin/python -m evaluation.rehearsal_check --json` 保存自检结果；
-  `--strict` 有阻塞项时退出 2，不把 TODO 写成已完成。
-- [ ] 备用录像录制完成并可播放（TODO：文件路径，例如 `docs/E/录像-2026-11-20.mp4`；是否入库按组内约定）。
-- [ ] `uv run pytest -q` 与 `uv run ruff check .` 实际结果已记录（TODO，不引用旧数字）；投影/字号/电源/麦克风已检查，A 确认调用额度与模型配置（不写密钥）。
+- [x] **冻结完成**：`git rev-parse HEAD` = `2bcee375ff09a80180bfca7433afb8af02da2945`，tag `demo-2026-11-21`（PR #1—#8 已全部合并到主线）。
+- [x] **3 条冻结版本历史记录**（2026-11-20 生成，均在上述 commit 上）：
+  - `outputs/21aebf1d0dc3472ba8db0f34d9481d71.json` — sneakers_wait，`mode=demo`，`status=completed`，建议 wait
+  - `outputs/2b30e37ebc3944d88e6ec3bdf6447ce9.json` — tissue_buy，`mode=demo`，`status=completed`，建议 buy
+  - `outputs/ef3faca934c34b52a8d10f809496b4ff.json` — sneakers_wait，`mode=real`，`status=partial`，错误指向 `BUDGET_AGENT_API_KEY`
+  记录不入库（`.gitignore` 已忽略 `outputs/`），路径固定在本机；换机需重新生成。
+- [ ] **依赖与离线启动**：`uv sync --frozen` 本机未通过（`~/.cache/uv` 只读）；`UV_CACHE_DIR=/tmp/uvcache uv run --frozen` 已验证可用；断网启动未测。
+- [x] **`real` 状态如实**：无本机密钥即 `partial`，不退回 demo（见上表第 3 条记录）。
+- [ ] **Streamlit 两页**：`tests/test_ui.py` 通过（含在 199 通过内）；冻结版本未手动开浏览器走查，端口 8501/8502 未实测。
+- [ ] **完整彩排两遍**：未进行（需 20 分钟计时 + 断网演练，人工执行）。
+- [x] **自检结果已保存**：`docs/E/rehearsal_2026-11-20.json`（`--json` 输出）。
+- [ ] **备用录像**：未录制（TODO：路径，例如 `docs/E/录像-2026-11-20.mp4`；是否入库按组内约定）。
+- [x] **测试与静态检查（冻结版本实测 2026-11-20）**：`.venv/bin/python -m pytest -q` → **199 passed**；`.venv/bin/python -m ruff check .` → **All checks passed**；`git diff --check` 通过。
+- [ ] **现场设备**：投影/字号/电源/麦克风未检查；A 需确认调用额度与模型配置（不写密钥）。
 
 ## 9. 故障预案与切换话术
 | 现象 | 动作 | 话术 |
 |---|---|---|
 | 网络/模型接口失败或超时 | 停止重试，切「历史回放」页或 `replay` | 「正式模型接口此刻不可用；以下展示的是 11/20 冻结版本保存的真实历史记录，不是实时推理，但输入、计算与证据都保留了。」 |
 | Streamlit 打不开 / 端口占用 | 换 `--server.port 8502`；仍失败改用 CLI | 「界面暂时不可用，我们用同一条 run_case 入口的命令行展示同一套流程。」 |
+| `uv run` 报 `Could not acquire lock` / `Read-only file system` | `export UV_CACHE_DIR=/tmp/uvcache` 后重试；或改用 `.venv/bin/budget-agent` | 「uv 缓存目录不可写，我们直接用仓库自带的虚拟环境跑同一条命令。」 |
 | 环境/依赖异常 | 备用机或已同步 `.venv`；再不行播录像 | 「环境故障，以下播放 11/20 彩排录像，内容与冻结版本一致。」 |
 | `outputs/` 为空或记录缺失 | 现场重跑 demo（不联网）生成记录再回放 | 「这是刚刚在冻结版本上生成的演示记录，可以现场回放核对。」 |
 | 时间不够 | 删第 3.3 节备选案例，保两个主案例与贡献/局限 | 「备选案例与实验数据见报告与仓库文档。」 |
@@ -137,15 +144,15 @@ uv run streamlit run app.py            # 端口占用时加 --server.port 8502
 ## 附录：11/20 必须填写的 TODO（没有实测就保留 TODO，不得用估计数）
 | # | TODO | 截止 |
 |---|---|---|
-| 1 | 冻结 commit SHA 与 tag | 11/20 上午 |
-| 2 | 3 条真实历史记录路径（两个主案例 + real partial） | 11/20 下午 |
-| 3 | 备用录像文件路径与可播放性 | 11/20 下午 |
-| 4 | 展示人最终分配 | 11/19 |
-| 5 | A—E 实际贡献（提交 / PR / 验收）与报告段落 | 11/19 |
-| 6 | B0/B1/B2/M/M_no_cross 真实结果（含分母与失败数） | 11/17—18 |
-| 7 | 真实 tokens 与耗时（不换算费用） | 11/18 |
-| 8 | 约 30 例冻结测试集与独立标签（两人复核） | 11/16 |
-| 9 | real 模式首条正式闭环记录（B/C/D 已集成；需本机 .env 密钥） | 11/20 前 |
-| 10 | 冻结版本 pytest / ruff 实际结果 | 11/20 |
+| 1 | ✅ 冻结 commit `2bcee375ff09a80180bfca7433afb8af02da2945`、tag `demo-2026-11-21` | 11/20 上午 |
+| 2 | ✅ 3 条历史记录（demo ×2 + real partial），路径见第 8 节 | 11/20 下午 |
+| 3 | ⏳ 备用录像文件路径与可播放性（未录制） | 11/20 下午 |
+| 4 | ⏳ 展示人最终分配（第 1 节时间轴已排，待全员确认） | 11/19 |
+| 5 | ✅ A—E 贡献已按提交/PR 记录填入第 7 节；⏳ 报告段落 | 11/19 |
+| 6 | ⏳ B0/B1/B2/M/M_no_cross 真实结果（含分母与失败数） | 11/17—18 |
+| 7 | ⏳ 真实 tokens 与耗时（不换算费用） | 11/18 |
+| 8 | ⏳ 30 例冻结测试集与独立标签（两人复核；当前 reviewed = 0/30） | 11/16 |
+| 9 | ⏳ real 模式首条正式闭环记录（B/C/D 已集成；需本机 .env 密钥） | 11/20 前 |
+| 10 | ✅ 冻结版本 199 passed、ruff All checks passed、`git diff --check` 通过（2026-11-20） | 11/20 |
 
 > 本文件只写展示脚本；实验数字与结论以 11/17—18 实际运行记录和 [report.md](report.md) 为准。
