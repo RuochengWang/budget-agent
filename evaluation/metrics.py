@@ -270,12 +270,18 @@ def compute_metrics(records: list[RunRecord], labels: list[dict]) -> dict[str, A
             counters["offer_optimal_amount"][0] += 1
 
         # 最优购物篮与规则：按 ID 排序后比较，避免顺序差异误判。
+        # 方案未确认（标签应付额为 None，例如运费未知）时购物篮不是可判定项：
+        # 只要求被评系统如实给出未确认方案，不比较占位用的 basket_ids。
         counters["offer_basket"][1] += 1
-        actual_basket = sorted(offer.basket_ids) if offer is not None else []
-        actual_rules = sorted(offer.rule_ids) if offer is not None else []
-        if (actual_basket == sorted(offer_label.get("optimal_basket_ids") or [])
-                and actual_rules == sorted(offer_label.get("optimal_rule_ids") or [])):
-            counters["offer_basket"][0] += 1
+        if offer_label.get("optimal_payable_cents") is None:
+            if offer is None or offer.payable_cents is None:
+                counters["offer_basket"][0] += 1
+        else:
+            actual_basket = sorted(offer.basket_ids) if offer is not None else []
+            actual_rules = sorted(offer.rule_ids) if offer is not None else []
+            if (actual_basket == sorted(offer_label.get("optimal_basket_ids") or [])
+                    and actual_rules == sorted(offer_label.get("optimal_rule_ids") or [])):
+                counters["offer_basket"][0] += 1
 
         # 优惠可行性：feasible=True 期望已验证的确认方案；否则期望如实未确认。
         counters["offer_feasible"][1] += 1

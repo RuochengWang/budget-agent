@@ -21,7 +21,7 @@ discretionary  = cash_cents − essential − reserve_cents      （可为负，
 方案总付款     = 购物篮原价 − 适用满减 + 运费
 优惠            = 有效期内、同商家、达到门槛；两条满减不可叠加，取更优者
 并列最优        = 付款额 → 凑单件数 → basket_ids 字典序 → rule_ids 字典序
-运费未知        = 应付总额 None，feasible=None，期望 need_info
+运费未知        = 应付总额 None，feasible=None，期望 need_info；最优购物篮/规则留空（方案未确认，不作评分项）
 缺任一预算字段  = missing_fields 列出缺项，依赖该字段的结果为 None，期望 need_info
 基本支出         = 只依赖天数、每日基本开支、固定支出；现金/预留金缺失不影响 essential
 缺字段提前停止   = 未调用方案求解，discretionary/remaining_cash/within_budget 无法确认
@@ -75,6 +75,26 @@ discretionary  = cash_cents − essential − reserve_cents      （可为负，
 - [ ] 运费未知时没有给出应付额；缺字段时 `within_budget=None`。
 - [ ] 并列最优按契约顺序选择；单买基准也枚举合法优惠。
 - [ ] 案例不含标签/答案字段；标签不进入模型输入。
+
+## 2026-11-20 程序复算记录（**不是**人工复核）
+
+E 用独立实现（不调用 C 的求解器、不读 C 的 catalog/promotions 模块，只用
+`data/catalog/` 快照与本文公式）对 40 条标签做了一次全字段复算：
+
+```bash
+python -m evaluation.verify_labels          # 共 40 例，一致 40 例
+python -m evaluation.verify_labels --json   # 机器可读，可直接贴进报告附录
+```
+
+| 项目 | 结果 |
+|---|---|
+| 覆盖 | dev 10 例 + test 30 例，逐字段比对（预算四值、missing_fields、offer 六项、reference_action） |
+| 结果 | **40/40 一致** |
+| 顺带修正 | 开发集 `unknown_shipping` 原来填了购物篮/规则，与 test 的「未确认方案留空」约定不一致；已统一为留空，并同步 `evaluation/metrics.py`：标签应付额为 `null` 时购物篮不作评分项 |
+| 性质 | **机器复算，不是两位组员的人工复核**；`review_status` 仍为 `draft` |
+
+> 结论：草案数值经独立实现复算后没有发现算术错误，可以放心作为人工复核的对照；
+> 但「两人独立复算 + 签字」这一步没有因此完成，正式评测仍会拒绝出成绩。
 
 ## 冻结记录（复核后人工填写）
 

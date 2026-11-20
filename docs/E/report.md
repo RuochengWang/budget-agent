@@ -41,13 +41,13 @@
 
 | 项目 | 值 |
 |---|---|
-| 冻结 commit / tag | TODO(E)：11/20 上午 `git rev-parse HEAD` |
+| 冻结 commit / tag | `2bcee375ff09a80180bfca7433afb8af02da2945` / `demo-2026-11-21`（2026-11-20 冻结，E 记录） |
 | 数据文件 SHA-256 | 由 `evaluation/run.py` 汇总自动写入 `outputs/*.summary.json` |
 | 提示词 SHA-256 | 每条 `RunRecord.prompt_hashes` 自动保存 |
 | 模型 ID / base_url | TODO(A)：与 `check-model` 自检一致 |
 | 配置快照 | `evaluation/run.py` 自动写入汇总（不含密钥） |
-| 开发/测试划分 | dev 10 例调试 / test 30 例候选（TODO：复核人与冻结日期） |
-| 独立标签 | TODO(E)：复核人、日期、冻结版本；`--allow-draft-labels` 只用于本地自测 |
+| 开发/测试划分 | dev 10 例调试 / test 30 例候选；测试集已冻结（2026-11-20），复核人与复核日期待两位组员签字后填写 |
+| 独立标签 | 40 条全部 `draft`、`reviewers` 为空（2026-11-20 状态）；**已用独立实现复算 40/40 一致**（`python -m evaluation.verify_labels`，不是人工复核）；人工复核后由 E 运行 `finalize_labels.py` 填写；`--allow-draft-labels` 只用于本地自测 |
 | 统一工具额度 | `max_tool_calls=6`（A 维护，实验期间不得单组调高） |
 | 随机化设置 | 人工评分两个 seed；TODO(E)：11/17 生成映射时记录 |
 | 运行命令 | 见 `evaluation/run.py --help`；输出 `outputs/evaluation-<baseline>.jsonl` 与 `.summary.json` |
@@ -58,6 +58,9 @@
 ## 4. 结果（待 11/17—18 真实运行）
 
 > 当前不得填入任何准确率、提升幅度或费用。以下表格只定义汇报格式。
+>
+> **2026-11-20 状态**：本机没有 `.env` 模型密钥（`real` 运行返回 `partial`），且标签 `reviewed = 0/30`，
+> 因此 B0/B1/B2/M/M_no_cross 尚无任何正式结果，下表保持 TODO；冻结版本只验证了 demo 流程与 199 项自动测试。
 
 | 指标 | 分母 | 有效样本 | 正确数 | 未运行 | 比率 |
 |---|---|---|---|---|---|
@@ -86,7 +89,9 @@
 
 - 展示脚本：[demo.md](demo.md)；展示时间 2026-11-21 下午，Asia/Shanghai。
 - 现场状态：demo / real / 历史回放明确区分；失败时保留可用结果，不显示假成功。
-- 备用：11/20 冻结历史记录与录像；路径 TODO(E)。
+- 备用：11/20 冻结版本生成的 3 条记录 —— `outputs/21aebf1d0dc3472ba8db0f34d9481d71.json`（sneakers_wait, demo）、
+  `outputs/2b30e37ebc3944d88e6ec3bdf6447ce9.json`（tissue_buy, demo）、
+  `outputs/ef3faca934c34b52a8d10f809496b4ff.json`（sneakers_wait, real partial）。录像仍待录制（TODO(E)）。
 
 ## 6. 局限（全员供稿）
 

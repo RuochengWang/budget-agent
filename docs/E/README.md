@@ -16,10 +16,11 @@ B/C/D 和 A 的真实联调修复均已合并；正式实验仍待两人独立�
 | [evaluation/metrics.py](../../evaluation/metrics.py) | 客观指标已实现 | 与独立标签比较，每项含 total/valid/correct/not_run/rate；单元测试见 tests/test_evaluation.py |
 | [evaluation/run.py](../../evaluation/run.py) | 已完善 | 复核标签校验、real 模式守卫、拒绝 partial/demo 记录、配置/哈希/commit 快照与汇总 JSON |
 | [evaluation/rehearsal_check.py](../../evaluation/rehearsal_check.py) | 已新增 | 11/20 彩排只读自检：冻结 commit、标签复核状态、历史记录、录像、界面两页、展示脚本 TODO；`--strict` 有阻塞项退出 2 |
+| [evaluation/verify_labels.py](../../evaluation/verify_labels.py) | 已新增（2026-11-20） | 40 条标签的独立复算：只用 `data/catalog` 快照与契约公式，不调用求解器、不调用模型；`python -m evaluation.verify_labels`，当前 40/40 一致；**属于机器复算，不替代人工复核** |
 | [evaluation/human_rubric.md](../../evaluation/human_rubric.md) | 流程已落实 | 匿名化映射、双 seed 随机排序、评分记录格式、汇总披露；评分数据待 11/17—18 生成 |
 | [data/cases/dev.jsonl](../../data/cases/dev.jsonl) | 已有 10 个开发案例 | 已覆盖预算不足/恰好、重复需求、凑单省钱/多花、活动过期、运费未知、缺字段；继续补真实场景 |
 | [data/cases/test.jsonl](../../data/cases/test.jsonl) | 已有 30 例候选，**待两人独立人工复核** | 逐例复算并记录复核人、实际日期和冻结 commit；冻结后不再改数值 |
-| [data/cases/labels.jsonl](../../data/cases/labels.jsonl) | 已有 40 条草案（dev 10 + test 30，全部 `draft`） | 集成修正 3 条基本支出并补独立公式回归；其余客观字段仍待复核，标签不传给模型 |
+| [data/cases/labels.jsonl](../../data/cases/labels.jsonl) | 40 条草案（dev 10 + test 30，全部 `draft`），**独立复算 40/40 一致** | 集成修正 3 条基本支出、统一运费未知约定；人工复核与签字仍未做，标签不传给模型 |
 | [data/cases/README.md](../../data/cases/README.md) | 已补覆盖矩阵与冻结流程 | dev 10 例、test 30 例候选、labels 格式、11/16 双人复核占位表；另见 [review_sheet.md](../../data/cases/review_sheet.md) 的 30 例逐例参考算术 |
 | [tests/test_ui.py](../../tests/test_ui.py) | 已补关键输入、缺失值与回放验收 | 覆盖空白与 0 的区分、案例切换、正式模式 partial 与历史回放 |
 | [docs/E/demo.md](demo.md) | 已完善 20 分钟脚本 | 实验数字、展示人分配与录像路径为 TODO，11/19–20 填入 |
