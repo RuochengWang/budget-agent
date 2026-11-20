@@ -379,3 +379,81 @@ def test_evaluate_rejects_unreviewed_labels_by_default(tmp_path):
         config=AppConfig(mode="real", output_dir=tmp_path), strict_labels=True,
     )
     assert any("尚未复核" in p for p in problems)
+
+
+def make_unconfirmed_label(case_id: str = "case_u") -> dict:
+    """运费未知的标签：方案未确认，购物篮留空。"""
+    label = make_label(case_id, payable=None)
+    label["offer"] = {
+        "feasible": None,
+        "optimal_payable_cents": None,
+        "optimal_basket_ids": [],
+        "optimal_rule_ids": [],
+        "baseline_payable_cents": None,
+        "shipping_cents": None,
+        "unknowns": ["运费未知"],
+    }
+    label["budget"]["remaining_cash_cents"] = None
+    label["budget"]["within_budget"] = None
+    label["budget"]["missing_fields"] = []
+    label["reference_action"] = "need_info"
+    return label
+
+
+def make_unconfirmed_record(case_id: str = "case_u", *,
+                            placeholder_basket: tuple[str, ...] = ("daily_goods",)) -> RunRecord:
+    """模拟求解器在运费未知时的保守输出：basket 占位、payable 为 None。"""
+    record = make_record(make_case(case_id), action="need_info", payable=None, within=None)
+    record.input.request.shipping_cents = None
+    record.final_decision.offer_result = OfferResult(
+        basket_ids=list(placeholder_basket),
+        verified=False,
+        verification_method="unverified",
+        is_demo=False,
+        unknowns=["运费未知，无法确认到手价"],
+    )
+    return record
+
+
+def test_unconfirmed_plan_does_not_grade_the_placeholder_basket():
+    label = make_unconfirmed_label()
+    record = make_unconfirmed_record()
+    result = compute_metrics([record], [label])
+    assert result["metrics"]["offer_optimal_amount"]["correct"] == 1
+    assert result["metrics"]["offer_basket"]["correct"] == 1
+    assert result["metrics"]["offer_feasible"]["correct"] == 1
+    assert result["metrics"]["constraint_violations"]["count"] == 0
+
+
+def test_unconfirmed_plan_labels_do_not_hide_a_confirmed_offer():
+    label = make_unconfirmed_label()
+    record = make_unconfirmed_record()
+    record.final_decision.offer_result = OfferResult(
+        basket_ids=["daily_goods"], subtotal_cents=28000, discount_cents=0,
+        shipping_cents=0, payable_cents=28000, baseline_payable_cents=28000,
+        rule_ids=[], verified=True, verification_method="solver", is_demo=False,
+    )
+    result = compute_metrics([record], [label])
+    assert result["metrics"]["offer_optimal_amount"]["correct"] == 0
+    assert result["metrics"]["offer_basket"]["correct"] == 0
+
+
+def test_labels_match_independent_recomputation():
+    from evaluation.verify_labels import collect
+
+    report = collect()
+    assert report["total"] == 40
+    assert report["missing_labels"] == []
+    assert report["consistent"], report["mismatched"]
+
+
+def test_unknown_shipping_labels_do_not_claim_an_optimal_basket():
+    from evaluation.verify_labels import CASES_DIR, _load_jsonl
+
+    labels = {label["case_id"]: label for label in _load_jsonl(CASES_DIR / "labels.jsonl")}
+    for case_id in ("unknown_shipping", "t_shipping_unknown_single", "t_shipping_unknown_basket"):
+        offer = labels[case_id]["offer"]
+        assert offer["optimal_payable_cents"] is None
+        assert offer["optimal_basket_ids"] == []
+        assert offer["optimal_rule_ids"] == []
+        assert offer["unknowns"] == ["运费未知"]

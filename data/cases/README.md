@@ -118,9 +118,19 @@
 标签只记录客观项：预算三值与 `within_budget`、缺失字段、最优总付款与购物篮/规则、
 优惠可行性、未知项。`reference_action` 仅作参考，不把“买不买”当作唯一真值。
 
+两条约定（2026-11-20 由独立复算统一，见 `evaluation/verify_labels.py`）：
+
+- **缺预算字段**：只计算依赖齐全字段的结果，其余为 `null`；`missing_fields` 非空、期望 `need_info`。
+- **运费未知**：方案未确认，`optimal_payable_cents`、`baseline_payable_cents`、`shipping_cents` 为 `null`，
+  `optimal_basket_ids` 与 `optimal_rule_ids` **留空**，`unknowns=["运费未知"]`，期望 `need_info`。
+  购物篮不是可判定项，评测的购物篮指标也不因此扣分。
+
 ## 复核与冻结要求
 
 - 至少两人独立复核 `test.jsonl` 与标签，并记录复核人、实际日期与冻结 commit。
+- **程序复算不等于人工复核**：2026-11-20 E 用独立实现（`python -m evaluation.verify_labels`）
+  对 40 条标签复算，结果 40/40 一致（此前 `unknown_shipping` 的购物篮/规则与 test 约定不一致，已统一）。
+  这只能作为复核前的自检记录，`review_status` 仍为 `draft`，不替代两位组员的独立复算与签字。
 - 不能用 C 的求解器给自己生成标准答案；可以事后用求解器交叉核对。
 - `labels.jsonl` 的 30 条 test 标签是 E 按契约公式整理的**草案**，同样须两人独立复算；
   逐例参考值与复核工作表见 [review_sheet.md](review_sheet.md)，给第二位复核人的操作说明见 [reviewer_instructions.md](reviewer_instructions.md)。

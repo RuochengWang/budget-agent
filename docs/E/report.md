@@ -47,7 +47,7 @@
 | 模型 ID / base_url | TODO(A)：与 `check-model` 自检一致 |
 | 配置快照 | `evaluation/run.py` 自动写入汇总（不含密钥） |
 | 开发/测试划分 | dev 10 例调试 / test 30 例候选；测试集已冻结（2026-11-20），复核人与复核日期待两位组员签字后填写 |
-| 独立标签 | 40 条全部 `draft`、`reviewers` 为空（2026-11-20 状态）；复核后由 E 运行 `finalize_labels.py` 填写；`--allow-draft-labels` 只用于本地自测 |
+| 独立标签 | 40 条全部 `draft`、`reviewers` 为空（2026-11-20 状态）；**已用独立实现复算 40/40 一致**（`python -m evaluation.verify_labels`，不是人工复核）；人工复核后由 E 运行 `finalize_labels.py` 填写；`--allow-draft-labels` 只用于本地自测 |
 | 统一工具额度 | `max_tool_calls=6`（A 维护，实验期间不得单组调高） |
 | 随机化设置 | 人工评分两个 seed；TODO(E)：11/17 生成映射时记录 |
 | 运行命令 | 见 `evaluation/run.py --help`；输出 `outputs/evaluation-<baseline>.jsonl` 与 `.summary.json` |

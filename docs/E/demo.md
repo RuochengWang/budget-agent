@@ -151,7 +151,7 @@ uv run streamlit run app.py            # 端口占用时加 --server.port 8502
 | 5 | ✅ A—E 贡献已按提交/PR 记录填入第 7 节；⏳ 报告段落 | 11/19 |
 | 6 | ⏳ B0/B1/B2/M/M_no_cross 真实结果（含分母与失败数） | 11/17—18 |
 | 7 | ⏳ 真实 tokens 与耗时（不换算费用） | 11/18 |
-| 8 | ⏳ 30 例冻结测试集与独立标签（两人复核；当前 reviewed = 0/30）；复核工具：`data/cases/标签复核工作簿_2026-11-20.xlsx` 与 `data/cases/review_checklist_2026-11-20.md` | 11/16 |
+| 8 | ⏳ 30 例冻结测试集与独立标签：当前 reviewed = 0/30；**程序复算 40/40 一致**（`python -m evaluation.verify_labels`），人工复核仍未做。复核工具：`data/cases/标签复核工作簿_2026-11-20.xlsx`、`review_checklist_2026-11-20.md` | 11/16 |
 | 9 | ⏳ real 模式首条正式闭环记录（B/C/D 已集成；需本机 .env 密钥） | 11/20 前 |
 | 10 | ✅ 冻结版本 199 passed、ruff All checks passed、`git diff --check` 通过（2026-11-20） | 11/20 |
 
