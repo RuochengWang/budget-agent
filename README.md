@@ -9,7 +9,7 @@
 使用 Python 3.11–3.13，推荐 Python 3.12。在终端运行：
 
 ```bash
-git clone --branch submission --single-branch https://github.com/RuochengWang/budget-agent.git
+git clone https://github.com/RuochengWang/budget-agent.git
 cd budget-agent
 uv sync --frozen --extra dev --extra ui
 uv run streamlit run app.py
