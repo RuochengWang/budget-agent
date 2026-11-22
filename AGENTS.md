@@ -1,7 +1,6 @@
 # 此仓库的协作约定
 
-只作用于 budget-agent 项目。依次阅读 README、docs/common/overview/README.md、
-docs/common/overview/flowcharts.md、docs/common/contracts.md 和对应 docs/A/—docs/E/ 中的 README.md。
+只作用于 budget-agent 项目。项目入口见 README，流程和接口约定见 docs/common。
 
 - 用户负责 A，成员统一以 A—E 标识，不附加职务称谓。展示时间 2026-11-21 下午，Asia/Shanghai。
 - 交付为协作骨架，不要自动替所有成员完成业务 TODO。

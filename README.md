@@ -1,181 +1,61 @@
-# 赛博节俭局 · 消费决策 Agent
+# 赛博节俭局
 
-五人课程项目的**可运行协作骨架**。课堂展示为 **2026 年 11 月 21 日下午（北京时间）**。
+基于多角色协作与约束优化的大学生消费决策 Agent。用户输入商品、购买需求和生活费情况，系统计算可支配预算，比较单买与必要凑单的实际付款，再给出购买、等待、放弃或补充信息的建议。
 
-目前已有公共协议、串行流程、工具白名单、记录与回放、学校模型适配层和最小界面。
-B/C/D 的正式预算、优惠求解与角色已接入；真实模型开发案例联调见 [验证记录](docs/A/live_validation.md)。
-E 已补齐表单、回放与评测框架；测试标签人工复核、部分基线与正式实验仍待完成。
-离线演示采用脚本角色和手工复算的优惠 fixture，**不代表正式算法或模型效果**。
+预算与优惠金额由程序计算。欲望、理性、优惠和裁判四个角色分别分析需求、替代方案、优惠结果与最终取舍。程序按最终付款复核预算，并检查建议中的约束与证据。界面可保存运行记录，也可查看历史回放。
 
-## A—E 统一上手顺序
+## 快速运行
 
-**每位同学都先了解整个项目，再进入自己的模块开发。**
+使用 Python 3.11–3.13，推荐 Python 3.12。在终端运行：
 
-1. **获取最新仓库。** A 首次建仓并分享地址；B—E 首次使用先克隆到本机。A 在自己的现有仓库工作。
-   已有本机仓库的同学，先保存手头改动，再更新 main；具体命令见 [Git 协作指南](CONTRIBUTING.md)。
-2. **看共同框架。** 先读 [总体结构](docs/common/overview/README.md) 和
-   [系统流程图](docs/common/overview/flowcharts.md)，了解各模块与负责人；
-   需要查具体文件时看 [文件地图](docs/common/overview/file_map.md)。
-3. **看接口与个人任务。** 阅读 [公共接口约定](docs/common/contracts.md)，
-   再进入自己的 `docs/A/`、`docs/B/`、`docs/C/`、`docs/D/` 或 `docs/E/`，阅读对应 README。
-4. **进入开发。** 按下方说明安装环境、跑通离线示例，再从最新 main 创建任务分支，完成开发、检查与 PR。
-
-首次克隆（地址由 A 提供，命令将本机目录统一命名为 budget-agent）：
-
-```text
-git clone 替换为实际仓库地址 budget-agent
+```bash
+git clone --branch submission --single-branch https://github.com/RuochengWang/budget-agent.git
 cd budget-agent
-```
-
-公共资料统一入口：[docs/common/README.md](docs/common/README.md)。个人开发入口见下方“成员入口”。
-
-## 第一次启动（Windows / macOS / Linux）
-
-推荐 Python 3.12，支持 3.11—3.13。终端先进入本仓库目录。
-推荐安装 [uv](https://docs.astral.sh/uv/getting-started/installation/)，然后：
-
-```text
 uv sync --frozen --extra dev --extra ui
-uv run budget-agent list-cases
-uv run budget-agent run --case sneakers_wait
-uv run budget-agent run --case tissue_buy
 uv run streamlit run app.py
 ```
 
-不需要激活虚拟环境。`uv.lock` 统一依赖版本；普通成员不要单独重新锁定依赖。
-CLI 会在 `outputs/` 保存记录。默认无网络、无 API 消耗。
+默认选择「离线演示替身」，它使用脚本角色和演示优惠，无需 API 密钥。运行页直接选商品、填预算与购买理由，然后提交。 [示例输入和演示步骤](docs/E/demo.md)
 
-不用 uv 的同学可使用已安装的 Python 3.12：
+也可以从命令行运行预设案例：
 
-```text
-python -m venv .venv
+```bash
+uv run budget-agent run --case sneakers_wait
+uv run budget-agent run --case tissue_buy
 ```
 
-macOS / Linux：
+本次记录保存在本机的 `outputs/`。运行过一次后可在界面切到「历史回放」。
 
-```text
-.venv/bin/python -m pip install -r requirements.lock
-.venv/bin/python -m pip install --no-deps -e .
-.venv/bin/python -m budget_agent run --case sneakers_wait
-.venv/bin/python -m streamlit run app.py
-```
+## 正式模型与交叉回应
 
-Windows PowerShell：
+将 `.env.example` 复制为 `.env`，在本机填入获授权的 API 密钥。默认模型为 `qwen3.8-chat`，可在 `.env` 中设置兼容接口地址和模型名。正式模式使用本地商品、活动样例和真实模型。界面上选择「正式模块」，需要交叉回应时勾选「一轮角色回应」。这两种正式配置的单次请求上限为 90 秒、整次运行上限为 540 秒。
 
-```text
-.venv\Scripts\python.exe -m pip install -r requirements.lock
-.venv\Scripts\python.exe -m pip install --no-deps -e .
-.venv\Scripts\python.exe -m budget_agent run --case sneakers_wait
-.venv\Scripts\python.exe -m streamlit run app.py
-```
-
-Windows 若 `python` 不是 3.12，可用 `py -3.12 -m venv .venv`。
-依赖下载需要联网；学校模型若校外访问受限，按学校要求连接校园网络。
-
-## 当前能运行什么
-
-| 内容 | 当前状态 |
-|---|---|
-| `demo` 离线闭环、最小输入表单、证据/调用轨迹、JSON 回放 | 可用，明确标注演示 |
-| 数据模型、工具参数校验、上限与基础决策保护 | 可用，成员继续扩展 |
-| 学校文本模型适配层与 `check-model` | 已做真实开发案例调用；结果与修正记录见 A 的真实联调说明 |
-| B 的正式预算与理性节点 | 已实现，已接入正式流程 |
-| C 的正式数据加载与通用优惠求解 | 已实现；当前使用明确标记的样例快照 |
-| D 的正式角色、工具序列与交叉回应 | 已实现并联调；默认关闭交叉回应，验收配置可显式开启 |
-| E 的界面与评测 | 表单、回放、指标及 M/M_no_cross 已实现；B0/B1/B2、标签复核与正式实验待完成 |
-
-```text
-uv run budget-agent run --case missing_profile
-uv run budget-agent run --case unknown_shipping
-uv run budget-agent run --case exact_budget
-uv run budget-agent --config configs/validation.toml run --mode real --case sneakers_wait
-```
-
-最后一条会真实调用学校模型，验收配置将等待时限延长至单次 90 秒、全流程 540 秒。
-开启一轮交叉回应可改用 `configs/validation_cross.toml`；默认配置及离线模式不变。
-失败仍返回明确状态并保留记录，不会偷偷使用演示逻辑。
-`completed` 只描述流程状态，是否演示由 `mode` 与模型标识单独说明。
-
-## 学校模型配置（A）
-
-把 `.env.example` 复制为 `.env`，仅在本机填写密钥。
-macOS 可用 `cp .env.example .env`；PowerShell 可用 `Copy-Item .env.example .env`。
-
-```dotenv
-BUDGET_AGENT_API_KEY=在本机填写
-BUDGET_AGENT_BASE_URL=https://api.llm.ustc.edu.cn/v1
-BUDGET_AGENT_MODEL=qwen3.8-chat
-```
-
-地址与模型名来自 A 提供的学校平台截图。适配层发送到 `/chat/completions`。
-以下命令**明确发起一次真实请求**，用于连接检查：
-
-```text
-uv run budget-agent check-model
-```
-
-基础连接通过后，再检查项目所需的 JSON 数据格式（格式失败最多重试一次）：
-
-```text
+```bash
 uv run budget-agent check-model --json
+uv run budget-agent --config configs/validation_cross.toml run --mode real --case sneakers_wait
 ```
 
-当前 A 已确认基础文本和真实 JSON 自检通过。该检查独立于 B/C/D 的正式业务模块。
-命令还会显示服务返回的各次请求 token 用量；未返回的字段显示“未提供”，不推算账户余额或费用。
+报错或中断时，尽可能保存已取得的证据与调用轨迹。 [真实联调记录](docs/A/live_validation.md)
 
-连接成功不等于正式业务已完成。第一阶段先统一一个文本 chat 模型；推理、OCR、
-图像模型不是可随意替换的同类接口，其他模型需由 A 实测后配置。
-完整的用户提供列表见 [模型接入说明](docs/A/model_setup.md)。
+## 项目结构
 
-## 成员入口
+| 路径 | 用途 |
+|---|---|
+| `app.py` | Streamlit 输入、结果与历史回放 |
+| `src/budget_agent/` | 流程调度、模型接入、四角色、预算及优惠求解 |
+| `data/catalog/` | 商品与活动快照 |
+| `data/cases/` | 开发案例、测试案例与标签 |
+| `evaluation/` | 评测入口、指标与复核工具 |
+| `tests/` | 功能与边界测试 |
 
-| 成员 | 主责 | 开始阅读 |
-|---|---|---|
-| A | 协议、流程、模型与集成 | [A 开发指南](docs/A/README.md) |
-| B | 预算与理性分析 | [B 开发指南](docs/B/README.md) |
-| C | 数据与优惠求解 | [C 开发指南](docs/C/README.md) |
-| D | 角色协作、优惠工具策略与裁判 | [D 开发指南](docs/D/README.md) |
-| E | 界面、案例、评测与展示 | [E 开发指南](docs/E/README.md) |
+[系统流程图](docs/common/overview/flowcharts.md) · [接口契约](docs/common/contracts.md) · [案例与标签说明](data/cases/README.md)
 
-共同阅读：[总体结构](docs/common/overview/README.md) · [系统流程图](docs/common/overview/flowcharts.md) · [接口契约](docs/common/contracts.md) ·
-[Git 协作](CONTRIBUTING.md) · [排期](docs/common/roadmap.md) · [任务清单](docs/common/tasks.md)。
+## 测试与项目范围
 
-**每个人需要修改哪些文件？** 各成员指南前部都有“需要完成的文件”表，列出完整路径、当前状态和具体任务。
-全组索引见 [文件分工与任务清单](docs/common/tasks.md)。
-
-## 检查与回放
-
-```text
-uv run pytest
+```bash
+uv run pytest -q
 uv run ruff check .
-uv run budget-agent replay outputs/替换成真实记录文件名.json
-uv run python -m evaluation.run --baseline M --cases data/cases/test.jsonl
+uv run python -m evaluation.integration_probe
 ```
 
-最后一条是正式评测入口，当前 30 条测试标签仍为草案，默认退出 2；完成独立复核后才能出成绩。
-B/C/D/E 已有普通验收与集成测试；未实现基线仍需明确报错，不能用演示数据制造评测结果。
-以实际 pytest 输出为准，自动检查不等同于独立测试集上的模型效果。
-
-本次交付的具体检查结果见 [验证记录](docs/common/verification.md)。
-
-回放不调用模型，CLI 会标明历史运行时间与模式。没有随仓库提供“真实模型运行记录”。
-
-## 目录
-
-```text
-configs/                 A：TOML 配置
-src/budget_agent/        正式包、公共协议、流程、角色与工具
-src/budget_agent/demo.py 专用离线替身，正式模块不得依赖
-data/catalog/           C：明确标记为演示的商品与活动
-data/cases/             E：开发案例与待冻结测试集
-evaluation/             E：评测接口与评分标准
-tests/                  公共检查与 B/C/D/A 的验收起点
-docs/A/ 至 docs/E/      各成员自己的开发文档
-docs/common/           全员共读的接口、任务、排期与验证记录
-docs/common/overview/  总体结构、流程图与逐文件地图
-outputs/                本地记录，默认忽略
-.github/                CI 与 PR/任务模板
-```
-
-采用 `src` 包布局，须先按上述命令安装；不要手动复制文件或修改 `sys.path`。
-原始五人方案保留在本仓库的上一级，本仓库 README 和协议记录实施阶段的具体约定。
+自动检查无需真实模型。当前支持已知商品、单商家及有限优惠组合。真实联调用例用于验证流程，正式评测需要先完成人工标签复核。API 密钥和个人运行记录保存在本机。

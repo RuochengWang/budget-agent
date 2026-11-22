@@ -4,7 +4,7 @@
     .venv/bin/python -m evaluation.rehearsal_check
     .venv/bin/python -m evaluation.rehearsal_check --strict   # 有阻塞项时退出 2
 
-检查项对应 docs/E/demo.md §8 清单；只报告事实，不把 TODO 写成已完成。
+演示流程见 docs/E/demo.md；只报告事实，不把 TODO 写成已完成。
 """
 
 from __future__ import annotations
