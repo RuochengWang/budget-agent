@@ -1,6 +1,6 @@
 """E：客观指标。只依赖公共 RunRecord 与独立人工标签，不依赖 B/C/D 正式模块。
 
-设计原则（对齐 docs/E/README.md 与 docs/common/contracts.md）：
+评测设计原则（接口约定见 docs/common/contracts.md）：
 - 未运行的样本（有标签、无记录）计入分母，但绝不记为正确；
 - 缺标签的记录单列 unmatched_records，不参与评分；
 - 有效样本为 0 时 rate 返回 None，绝不返回 0 或 100%；

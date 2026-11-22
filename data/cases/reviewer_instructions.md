@@ -31,4 +31,4 @@
 
 - 评测运行器默认要求 `review_status=reviewed`，冻结后才会放行；
 - 用 [离线探针](../../evaluation/integration_probe.py) 做离线联调（模拟模型，不调真实 API）；
-- 复核后按 A 确认的实验范围跑真实对照，把实测结果填进 [报告](../../docs/E/report.md)。
+- 复核后按 A 确认的实验范围跑真实对照，将实测结果及汇总记录保存在本机。

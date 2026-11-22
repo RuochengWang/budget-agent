@@ -5,21 +5,24 @@
 """
 
 import json
+import re
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
+from uuid import uuid4
 
 import streamlit as st
 from pydantic import ValidationError
 
 from budget_agent.config import PROJECT_ROOT, load_config
 from budget_agent.errors import AgentError
-from budget_agent.main import load_cases
-from budget_agent.schemas import CaseInput, RunRecord
+from budget_agent.schemas import Argument, CaseInput, PurchaseRequest, RunRecord, UserProfile
 from budget_agent.storage import load_record, save_record
 from budget_agent.workflow import run_case
 
 REAL_CONFIG_PATH = PROJECT_ROOT / "configs" / "validation.toml"
+CROSS_CONFIG_PATH = PROJECT_ROOT / "configs" / "validation_cross.toml"
+CROSS_REPLY_PREFIX = re.compile(r"^（回应([a-z_]+)）")
 TZ = timezone(timedelta(hours=8))
 ACTION_LABELS = {"buy": "购买", "wait": "等待", "skip": "放弃", "need_info": "补充信息"}
 ROLE_LABELS = {"desire": "欲望观点", "rational": "理性观点", "deal": "优惠观点", "judge": "裁判"}
@@ -170,19 +173,45 @@ def render_calculation(record: RunRecord) -> None:
     )
 
 
+def render_argument(
+    argument: Argument, title: str, claims: list[str], *, expanded: bool = False
+) -> None:
+    stance = STANCE_LABELS.get(argument.stance, argument.stance)
+    with st.expander(f"{title} · {stance}", expanded=expanded):
+        for claim in claims:
+            st.markdown(f"- {claim}")
+        st.caption("证据：" + ("、".join(argument.evidence_ids) or "无"))
+        if argument.unknowns:
+            st.caption("未知项：" + "；".join(argument.unknowns))
+
+
 def render_arguments(record: RunRecord) -> None:
-    if not record.arguments:
-        return
-    st.markdown("### 角色观点")
+    cross_enabled = record.config_snapshot.get("cross_response_enabled") is True
+    initial: list[Argument] = []
+    replies: list[tuple[Argument, str, str]] = []
     for argument in record.arguments:
-        title = ROLE_LABELS.get(argument.role, argument.role)
-        stance = STANCE_LABELS.get(argument.stance, argument.stance)
-        with st.expander(f"{title} · {stance}"):
-            for claim in argument.claims:
-                st.markdown(f"- {claim}")
-            st.caption("证据：" + ("、".join(argument.evidence_ids) or "无"))
-            if argument.unknowns:
-                st.caption("未知项：" + "；".join(argument.unknowns))
+        # D 已在交叉回应正文前加上回应对象，旧记录也使用这个标记。
+        if cross_enabled and len(argument.claims) == 1:
+            body = argument.claims[0]
+            match = CROSS_REPLY_PREFIX.match(body)
+            if match and match[1] in ROLE_LABELS and match[1] != argument.role:
+                replies.append((argument, match[1], body[match.end():].strip()))
+                continue
+        initial.append(argument)
+
+    if initial:
+        st.markdown("### 初始观点")
+        for argument in initial:
+            title = ROLE_LABELS.get(argument.role, argument.role)
+            render_argument(argument, title, argument.claims)
+    if cross_enabled:
+        st.markdown("### 交叉回应")
+        if not replies:
+            st.caption("本次记录没有可展示的交叉回应。")
+        for argument, target, body in replies:
+            speaker = ROLE_LABELS.get(argument.role, argument.role).removesuffix("观点")
+            listener = ROLE_LABELS[target].removesuffix("观点")
+            render_argument(argument, f"{speaker}回应{listener}", [body], expanded=True)
 
 
 def render_decision(record: RunRecord) -> None:
@@ -191,7 +220,7 @@ def render_decision(record: RunRecord) -> None:
         st.info("本次没有形成最终建议：请查看下方错误与轨迹，或补充信息后重试。")
         return
     proposed = record.proposed_decision
-    st.markdown("### 结论")
+    st.markdown("### 裁判建议")
     if proposed is not None and proposed.action != final.action:
         before = ACTION_LABELS.get(proposed.action, proposed.action)
         after = ACTION_LABELS.get(final.action, final.action)
@@ -349,95 +378,117 @@ def main() -> None:
         config = load_config(mode="demo")
         st.info("离线演示使用脚本角色与手工优惠样例。商品和活动来自样例快照，不是实时购物信息。")
 
-    cases = load_cases(config.data_dir / "cases" / "dev.jsonl")
-    selected = st.selectbox(
-        "加载开发案例",
-        cases,
-        format_func=lambda case: case if isinstance(case, str) else case.title,
-        key="case",
-    )
     catalog = load_catalog_products(config.data_dir)
     rows = {row["id"]: row for row in catalog}
-    target_options = sorted({selected.request.target_product_id, *rows})
-    profile = selected.profile
-    request = selected.request
-    with st.form(f"profile_{selected.case_id}"):
-        st.write("预算金额以元填写；留空表示尚未提供，0 表示已确认没有该项支出。")
+    if not rows:
+        st.error("无法读取商品，暂时不能开始评估。")
+        return
+
+    product_ids = sorted(rows)
+
+    def label_product(product_id: str) -> str:
+        return product_label(rows[product_id])
+
+    now = datetime.now(TZ).replace(second=0, microsecond=0)
+    with st.form("purchase_input"):
+        enable_cross = mode == "real" and st.checkbox(
+            "一轮角色回应",
+            help="欲望和理性角色各回应一条具体观点，再由裁判给出建议。",
+            key="cross_response",
+        )
+        st.caption("金额以元填写。留空表示尚未提供，填 0 表示确认该项为零。")
         target = st.selectbox(
             "目标商品",
-            target_options,
-            index=target_options.index(request.target_product_id),
-            format_func=lambda pid: product_label(rows[pid]) if pid in rows else pid,
-            key=f"target_{selected.case_id}",
+            product_ids,
+            index=None,
+            format_func=label_product,
+            placeholder="请选择，例如演示球鞋",
+            key="target",
         )
         cols = st.columns(3)
         fields = [
-            ("cash_cents", "当前现金"),
-            ("daily_essential_cents", "每日基本开支"),
-            ("fixed_expenses_cents", "剩余固定支出"),
-            ("reserve_cents", "预留金"),
+            ("cash_cents", "当前现金", "1200"),
+            ("daily_essential_cents", "每日基本开支", "40"),
+            ("fixed_expenses_cents", "剩余固定支出", "0"),
+            ("reserve_cents", "预留金", "100"),
         ]
         inputs = {}
-        for index, (field, label) in enumerate(fields):
-            value = getattr(profile, field)
+        for index, (field, label, example) in enumerate(fields):
             inputs[field] = cols[index % 3].text_input(
                 f"{label}（元）",
-                value="" if value is None else str(Decimal(value) / 100),
-                key=f"{field}_{selected.case_id}",
+                placeholder=f"例如 {example}",
+                key=field,
             )
         days = cols[1].text_input(
             "距下次生活费天数",
-            value="" if profile.days_remaining is None else str(profile.days_remaining),
-            key=f"days_{selected.case_id}",
+            placeholder="例如 20",
+            key="days",
         )
         shipping = cols[2].text_input(
             "运费（元）",
-            value=""
-            if request.shipping_cents is None
-            else str(Decimal(request.shipping_cents) / 100),
-            key=f"shipping_{selected.case_id}",
+            placeholder="例如 0",
+            key="shipping",
         )
         urgency = st.selectbox(
             "需求紧迫程度",
             ["low", "medium", "high"],
-            index=["low", "medium", "high"].index(request.urgency),
+            index=1,
             format_func=lambda item: URGENCY_LABELS[item],
-            key=f"urgency_{selected.case_id}",
+            key="urgency",
         )
         owned = st.text_area(
             "已有相似物品（逗号或换行分隔）",
-            value="、".join(profile.owned_similar_items),
-            key=f"owned_{selected.case_id}",
+            placeholder="例如 旧球鞋",
+            key="owned",
         )
-        addon_options = [pid for pid in sorted(rows) if pid != target]
         addons = st.multiselect(
             "确实需要一并购买的凑单品（最多 8 个）",
-            addon_options,
-            default=[pid for pid in request.needed_addon_ids if pid in addon_options],
-            format_func=lambda pid: product_label(rows[pid]) if pid in rows else pid,
-            key=f"addons_{selected.case_id}",
+            product_ids,
+            format_func=label_product,
+            max_selections=8,
+            placeholder="选填，不含目标商品",
+            key="addons",
         )
-        default_as_of = request.as_of.astimezone(TZ)
-        when_date = st.date_input("评估日期", value=default_as_of.date(), key=f"date_{selected.case_id}")
-        when_time = st.time_input("评估时间", value=default_as_of.time(), key=f"time_{selected.case_id}")
+        when_date = st.date_input("评估日期", value=now.date(), key="date")
+        when_time = st.time_input("评估时间", value=now.time(), key="time")
         reason = st.text_area(
-            "购买理由", value=request.need_reason, key=f"reason_{selected.case_id}"
+            "购买理由", placeholder="例如 喜欢新配色，希望换一双球鞋", key="reason"
         )
         submitted = st.form_submit_button("运行并保存本地记录")
 
     if submitted:
+        if target is None:
+            st.error("请选择目标商品。")
+            return
+        if not reason.strip():
+            st.error("请填写购买理由。")
+            return
+        if target in addons:
+            st.error("凑单品不能与目标商品相同。")
+            return
+        if when_date is None or when_time is None:
+            st.error("请填写评估日期和时间。")
+            return
         try:
-            raw = selected.model_dump(mode="json")
-            raw["profile"].update({field: money_input(value) for field, value in inputs.items()})
-            raw["profile"]["days_remaining"] = days_input(days)
-            raw["profile"]["owned_similar_items"] = split_items(owned)
-            raw["request"]["target_product_id"] = target
-            raw["request"]["urgency"] = urgency
-            raw["request"]["needed_addon_ids"] = [pid for pid in addons if pid != target][:8]
-            raw["request"]["shipping_cents"] = money_input(shipping)
-            raw["request"]["need_reason"] = reason
-            raw["request"]["as_of"] = datetime.combine(when_date, when_time, tzinfo=TZ).isoformat()
-            case = CaseInput.model_validate(raw)
+            case = CaseInput(
+                case_id=f"manual_{uuid4().hex}",
+                title=f"{rows[target].get('name', target)}购买评估",
+                profile=UserProfile(
+                    **{field: money_input(value) for field, value in inputs.items()},
+                    days_remaining=days_input(days),
+                    owned_similar_items=split_items(owned),
+                ),
+                request=PurchaseRequest(
+                    target_product_id=target,
+                    need_reason=reason.strip(),
+                    urgency=urgency,
+                    needed_addon_ids=addons,
+                    shipping_cents=money_input(shipping),
+                    as_of=datetime.combine(when_date, when_time, tzinfo=TZ),
+                ),
+            )
+            if enable_cross:
+                config = load_config(CROSS_CONFIG_PATH, mode="real")
             with st.spinner("正在运行…"):
                 record = run_case(case, config)
                 saved = save_record(record, config.output_dir)
@@ -447,16 +498,12 @@ def main() -> None:
             if isinstance(exc, (AgentError, ValidationError)):
                 st.error(f"运行失败（{type(exc).__name__}）：{exc}")
             else:
-                st.error("请检查输入：金额最多两位小数且非负，天数为非负整数，需求理由不能为空。")
+                st.error("请检查输入：金额最多两位小数且非负，天数为非负整数。")
+            return
 
     record = st.session_state.get("record")
     if record is not None:
-        st.subheader("本次结果")
-        if record.input.case_id != selected.case_id or record.mode != mode:
-            st.info(
-                f"下面显示的是案例「{record.input.title}」（{record.mode}）的上次运行结果，"
-                "不是当前表单或运行方式的结果。"
-            )
+        st.subheader("本次结果" if submitted else "上次提交结果")
         render_record(record, saved_path=st.session_state.get("saved"), replay=False)
 
 

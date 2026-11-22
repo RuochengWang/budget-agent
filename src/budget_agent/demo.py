@@ -88,7 +88,7 @@ class DemoCatalog:
             return OfferResult(
                 basket_ids=[request.target_product_id],
                 is_demo=True,
-                unknowns=["没有匹配的演示 fixture；请使用内置案例"],
+                unknowns=["当前商品与活动组合没有匹配的离线演示样例"],
             )
         offer = min(matching, key=lambda r: r.payable_cents)
         if request.shipping_cents is None:

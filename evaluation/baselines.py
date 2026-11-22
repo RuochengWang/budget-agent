@@ -51,7 +51,7 @@ def available_baselines() -> tuple[str, ...]:
 
 
 def baseline_plan(name: str) -> dict[str, Any]:
-    """描述基线的口径与所需依赖，供 docs/E/report.md 与展示脚本引用。"""
+    """描述基线的口径与所需依赖，供评测与展示说明引用。"""
     if name not in BASELINES:
         raise ValueError(f"未知基线：{name}")
     return {
